@@ -16,7 +16,7 @@ const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 // ダミーの予約データ
 const dummyAppointments = [
   {
-    id: 1,
+    id: '1',
     title: 'カット & カラー',
     start: new Date(2025, 4, 11, 10, 0), // 5月11日 10:00
     end: new Date(2025, 4, 11, 11, 30),  // 5月11日 11:30
@@ -24,7 +24,7 @@ const dummyAppointments = [
     color: 'bg-blue-500'
   },
   {
-    id: 2,
+    id: '2',
     title: 'パーマ',
     start: new Date(2025, 4, 12, 14, 0), // 5月12日 14:00
     end: new Date(2025, 4, 12, 16, 0),   // 5月12日 16:00
@@ -32,7 +32,7 @@ const dummyAppointments = [
     color: 'bg-green-500'
   },
   {
-    id: 3,
+    id: '3',
     title: 'ヘッドスパ',
     start: new Date(2025, 4, 13, 11, 0), // 5月13日 11:00
     end: new Date(2025, 4, 13, 12, 0),   // 5月13日 12:00
@@ -93,10 +93,14 @@ export default function CalendarView() {
     }).map(appointment => (
       <div 
         key={appointment.id}
-        className={`${appointment.color} text-white rounded p-1 text-xs`}
+        className={`${appointment.color} text-white rounded p-1 text-xs cursor-pointer hover:opacity-90`}
         style={{
           height: `${(appointment.end.getTime() - appointment.start.getTime()) / (1000 * 60 * 30) * 24}px`,
           marginTop: `${(appointment.start.getMinutes() / 60) * 48}px`
+        }}
+        onClick={(e) => {
+          e.stopPropagation(); // 親要素へのクリックイベント伝播を防止
+          handleAppointmentClick(appointment.id);
         }}
       >
         <div className="font-bold">{appointment.title}</div>
@@ -106,6 +110,11 @@ export default function CalendarView() {
         </div>
       </div>
     ));
+  };
+
+  // 予約クリック時の処理 - 予約詳細ページへ遷移
+  const handleAppointmentClick = (appointmentId: string) => {
+    router.push(`/appointments/${appointmentId}`);
   };
 
   // タイムスロットが予約済みかどうかをチェック
@@ -123,7 +132,7 @@ export default function CalendarView() {
     });
   };
 
-  // タイムスロットをタップ/クリックした時の処理
+  // 空きスロットをタップ/クリックした時の処理
   const handleSlotClick = (date: Date, hour: number) => {
     // 予約済みのスロットは選択できないようにする
     if (isSlotBooked(date, hour)) return;

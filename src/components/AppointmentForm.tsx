@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, addDays, setHours, setMinutes, parseISO } from 'date-fns';
-import ja from 'date-fns/locale/ja';
+import { ja } from 'date-fns/locale';
 
 // 仮の顧客データ
 const DUMMY_CUSTOMERS = [

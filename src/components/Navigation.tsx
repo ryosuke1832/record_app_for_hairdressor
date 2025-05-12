@@ -8,7 +8,9 @@ const Navigation = () => {
   const pathname = usePathname();
 
   const isActive = (path: string) => {
-    return pathname === path;
+    // 現在のパスが指定したパスで始まる場合にアクティブとみなす
+    // これにより /appointments/123 などでも /appointments がアクティブになる
+    return pathname === path || pathname?.startsWith(`${path}/`);
   };
 
   return (
@@ -28,6 +30,16 @@ const Navigation = () => {
             }`}
           >
             カレンダー
+          </Link>
+          <Link 
+            href="/appointments" 
+            className={`px-3 py-2 rounded-md text-sm font-medium ${
+              isActive('/appointments') 
+                ? 'bg-blue-700 text-white' 
+                : 'text-gray-200 hover:bg-gray-700 hover:text-white'
+            }`}
+          >
+            予約一覧
           </Link>
           <Link 
             href="/customers" 
