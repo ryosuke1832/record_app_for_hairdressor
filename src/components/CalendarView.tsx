@@ -1,7 +1,10 @@
+// src/components/CalendarView.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 // 時間設定（変数として定義）
 const START_HOUR = 8; // 開始時間（8時）
@@ -39,8 +42,12 @@ const dummyAppointments = [
 ];
 
 export default function CalendarView() {
+  const router = useRouter(); // Next.jsのルータを使用
   const [currentDate, setCurrentDate] = useState(new Date());
   const [weekDates, setWeekDates] = useState<Date[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<{date: Date, hour: number} | null>(null);
+  const [showLongPressIndicator, setShowLongPressIndicator] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
 
   // 週の日付を生成
   useEffect(() => {
@@ -101,6 +108,67 @@ export default function CalendarView() {
     ));
   };
 
+  // タイムスロットが予約済みかどうかをチェック
+  const isSlotBooked = (date: Date, hour: number) => {
+    return dummyAppointments.some(appointment => {
+      const appointmentHour = appointment.start.getHours();
+      const appointmentEndHour = appointment.end.getHours();
+      const appointmentEndMinutes = appointment.end.getMinutes();
+      
+      // 時間が0分の場合、終了時間は前の時間帯に含める
+      const effectiveEndHour = appointmentEndMinutes === 0 ? appointmentEndHour - 1 : appointmentEndHour;
+      
+      return isSameDay(appointment.start, date) && 
+             (hour >= appointmentHour && hour <= effectiveEndHour);
+    });
+  };
+
+  // タイムスロットをタップ/クリックした時の処理
+  const handleSlotClick = (date: Date, hour: number) => {
+    // 予約済みのスロットは選択できないようにする
+    if (isSlotBooked(date, hour)) return;
+
+    // 予約作成画面へ遷移（選択した日付と時間をパラメータとして渡す）
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
+    
+    router.push(`/appointments/new?date=${formattedDate}&time=${formattedTime}`);
+  };
+
+  // タイムスロットを長押しした時の処理（モバイル対応）
+  const handleTouchStart = (date: Date, hour: number) => {
+    // 予約済みのスロットは選択できないようにする
+    if (isSlotBooked(date, hour)) return;
+
+    setSelectedSlot({ date, hour });
+    
+    // 長押しタイマーを設定（600ms）
+    const timer = setTimeout(() => {
+      setShowLongPressIndicator(true);
+      
+      // 1秒後に予約作成画面へ遷移
+      setTimeout(() => {
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
+        router.push(`/appointments/new?date=${formattedDate}&time=${formattedTime}`);
+      }, 500);
+    }, 600);
+    
+    setLongPressTimer(timer);
+  };
+
+  // タッチ終了時の処理
+  const handleTouchEnd = () => {
+    // タイマーをクリア
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    
+    setSelectedSlot(null);
+    setShowLongPressIndicator(false);
+  };
+
   return (
     <div className="p-4 mx-auto max-w-7xl">
       {/* ヘッダー */}
@@ -132,9 +200,11 @@ export default function CalendarView() {
           </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button className="bg-blue-600 text-white px-4 py-1 rounded text-sm flex-1 sm:flex-none">
-            新規予約
-          </button>
+          <Link href="/appointments/new" className="flex-1 sm:flex-none">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm w-full">
+              新規予約
+            </button>
+          </Link>
           <button className="border border-gray-300 px-4 py-1 rounded text-sm flex-1 sm:flex-none">
             表示設定
           </button>
@@ -181,20 +251,45 @@ export default function CalendarView() {
             </div>
             
             {/* 各曜日の時間枠 */}
-            {weekDates.map((date, dateIndex) => (
-              <div 
-                key={dateIndex} 
-                className="relative h-12 border-r border-gray-300"
-              >
-                {/* 30分区切りの薄い境界線 */}
-                <div className="absolute w-full h-px bg-gray-200 top-1/2"></div>
-                
-                {/* 予約表示 */}
-                <div className="relative h-full">
-                  {renderAppointment(date, hour)}
+            {weekDates.map((date, dateIndex) => {
+              const booked = isSlotBooked(date, hour);
+              const isSelected = selectedSlot && 
+                                isSameDay(selectedSlot.date, date) && 
+                                selectedSlot.hour === hour;
+              
+              return (
+                <div 
+                  key={dateIndex} 
+                  className={`relative h-12 border-r border-gray-300 ${
+                    booked ? '' : 'cursor-pointer hover:bg-blue-50'
+                  } ${isSelected && showLongPressIndicator ? 'bg-blue-100' : ''}`}
+                  onClick={() => !booked && handleSlotClick(date, hour)}
+                  onTouchStart={() => handleTouchStart(date, hour)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
+                  onMouseDown={() => handleTouchStart(date, hour)}
+                  onMouseUp={handleTouchEnd}
+                  onMouseLeave={handleTouchEnd}
+                >
+                  {/* 30分区切りの薄い境界線 */}
+                  <div className="absolute w-full h-px bg-gray-200 top-1/2"></div>
+                  
+                  {/* 予約表示 */}
+                  <div className="relative h-full">
+                    {renderAppointment(date, hour)}
+                  </div>
+                  
+                  {/* 長押しインジケーター */}
+                  {isSelected && showLongPressIndicator && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-70">
+                      <div className="text-xs font-medium text-blue-800">
+                        予約作成中...
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>
