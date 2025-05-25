@@ -1,0 +1,183 @@
+{
+  "appointments": [
+    {
+      "id": "1",
+      "title": "カット & カラー",
+      "start": "2025-05-11T10:00:00",
+      "end": "2025-05-11T11:30:00",
+      "clientId": "1",
+      "clientName": "田中 さくら",
+      "phone": "090-1234-5678",
+      "services": [
+        {
+          "id": "1",
+          "name": "カット",
+          "duration": 40,
+          "price": 4500
+        },
+        {
+          "id": "2",
+          "name": "カラー",
+          "duration": 90,
+          "price": 8000
+        }
+      ],
+      "totalPrice": 12500,
+      "totalDuration": 130,
+      "note": "アッシュブラウンでお願いします",
+      "status": "scheduled",
+      "createdAt": "2025-01-15T09:00:00",
+      "updatedAt": "2025-01-15T09:00:00"
+    },
+    {
+      "id": "2",
+      "title": "パーマ",
+      "start": "2025-05-12T14:00:00",
+      "end": "2025-05-12T16:00:00",
+      "clientId": "2",
+      "clientName": "鈴木 健太",
+      "phone": "090-8765-4321",
+      "services": [
+        {
+          "id": "3",
+          "name": "パーマ",
+          "duration": 120,
+          "price": 12000
+        }
+      ],
+      "totalPrice": 12000,
+      "totalDuration": 120,
+      "note": "前回よりも強めにかけてほしいとのこと",
+      "status": "scheduled",
+      "createdAt": "2025-01-15T10:00:00",
+      "updatedAt": "2025-01-15T10:00:00"
+    },
+    {
+      "id": "3",
+      "title": "ヘッドスパ",
+      "start": "2025-05-13T11:00:00",
+      "end": "2025-05-13T12:00:00",
+      "clientId": "3",
+      "clientName": "伊藤 めぐみ",
+      "phone": "090-2468-1357",
+      "services": [
+        {
+          "id": "5",
+          "name": "ヘッドスパ",
+          "duration": 40,
+          "price": 5000
+        },
+        {
+          "id": "4",
+          "name": "トリートメント",
+          "duration": 30,
+          "price": 3000
+        }
+      ],
+      "totalPrice": 8000,
+      "totalDuration": 70,
+      "note": "アロマはラベンダーが好みです",
+      "status": "scheduled",
+      "createdAt": "2025-01-15T11:00:00",
+      "updatedAt": "2025-01-15T11:00:00"
+    },
+    {
+      "id": "4",
+      "title": "カット",
+      "start": "2025-05-14T15:30:00",
+      "end": "2025-05-14T16:10:00",
+      "clientId": "4",
+      "clientName": "山田 花子",
+      "phone": "090-3579-2468",
+      "services": [
+        {
+          "id": "1",
+          "name": "カット",
+          "duration": 40,
+          "price": 4500
+        }
+      ],
+      "totalPrice": 4500,
+      "totalDuration": 40,
+      "note": "前髪は眉上でお願いします",
+      "status": "scheduled",
+      "createdAt": "2025-01-15T12:00:00",
+      "updatedAt": "2025-01-15T12:00:00"
+    },
+    {
+      "id": "5",
+      "title": "トリートメント & ヘッドスパ",
+      "start": "2025-05-15T13:00:00",
+      "end": "2025-05-15T14:10:00",
+      "clientId": "5",
+      "clientName": "佐藤 一郎",
+      "phone": "090-1357-9999",
+      "services": [
+        {
+          "id": "4",
+          "name": "トリートメント",
+          "duration": 30,
+          "price": 3000
+        },
+        {
+          "id": "5",
+          "name": "ヘッドスパ",
+          "duration": 40,
+          "price": 5000
+        }
+      ],
+      "totalPrice": 8000,
+      "totalDuration": 70,
+      "note": "リラックス重視でお願いします",
+      "status": "completed",
+      "createdAt": "2025-01-15T13:00:00",
+      "updatedAt": "2025-01-15T14:30:00"
+    },
+    {
+      "id": "6",
+      "title": "シャンプー・ブロー",
+      "start": "2025-05-25T00:00:00.000Z",
+      "end": "2025-05-25T00:20:00.000Z",
+      "clientId": "1",
+      "clientName": "田中 さくら",
+      "phone": "090-1234-5678",
+      "services": [
+        {
+          "id": "6",
+          "name": "シャンプー・ブロー",
+          "duration": 20,
+          "price": 2000
+        }
+      ],
+      "totalPrice": 2000,
+      "totalDuration": 20,
+      "note": "",
+      "status": "scheduled",
+      "createdAt": "2025-05-24T23:59:46.314Z",
+      "updatedAt": "2025-05-24T23:59:46.314Z"
+    },
+    {
+      "id": "7",
+      "title": "カラー",
+      "start": "2025-05-26T01:00:00.000Z",
+      "end": "2025-05-26T02:30:00.000Z",
+      "clientId": "2",
+      "clientName": "佐藤 健太",
+      "phone": "090-8765-4321",
+      "services": [
+        {
+          "id": "2",
+          "name": "カラー",
+          "duration": 90,
+          "price": 8000
+        }
+      ],
+      "totalPrice": 8000,
+      "totalDuration": 90,
+      "note": "",
+      "status": "scheduled",
+      "createdAt": "2025-05-25T00:00:09.906Z",
+      "updatedAt": "2025-05-25T00:00:09.906Z"
+    }
+  ]
+}

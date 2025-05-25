@@ -43,6 +43,7 @@ type AppointmentFormProps = {
 export default function AppointmentForm({ initialDate, initialTime }: AppointmentFormProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     customerId: '',
     customerName: '',
@@ -121,15 +122,72 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
   };
 
   // フォーム送信ハンドラ
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // ここでAPIリクエストを送信する代わりに、一時的にコンソールに出力
-    console.log('予約データを送信:', formData);
+    if (isSubmitting) return; // 二重送信防止
     
-    // 予約完了後、カレンダー画面に戻る
-    alert('予約が登録されました');
-    router.push('/calendar');
+    setIsSubmitting(true);
+
+    try {
+      // 選択されたサービスデータを取得
+      const selectedServices = DUMMY_SERVICES.filter(service => 
+        formData.selectedServices.includes(service.id)
+      );
+
+      // 開始時間を作成
+      const [startHour, startMinute] = formData.time.split(':').map(Number);
+      const startDate = new Date(`${formData.date}T00:00:00`);
+      const start = setMinutes(setHours(startDate, startHour), startMinute);
+      
+      // 終了時間を計算
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + totalDuration);
+
+      // 顧客情報を取得
+      const selectedCustomer = DUMMY_CUSTOMERS.find(customer => customer.id === formData.customerId);
+      
+      // APIに送信するデータを作成
+      const appointmentData = {
+        clientName: formData.customerName,
+        phone: selectedCustomer?.phone || '',
+        start: start.toISOString(),
+        end: end.toISOString(),
+        services: selectedServices,
+        totalPrice: totalPrice,
+        totalDuration: totalDuration,
+        note: formData.note,
+        clientId: formData.customerId
+      };
+
+      // APIに予約データを送信
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appointmentData),
+      });
+
+      if (!response.ok) {
+        throw new Error('予約の登録に失敗しました');
+      }
+
+      const createdAppointment = await response.json();
+      console.log('予約が作成されました:', createdAppointment);
+
+      // 成功メッセージを表示
+      alert('予約が登録されました');
+      
+      // カレンダー画面に戻る
+      router.push('/calendar');
+      
+    } catch (error) {
+      console.error('予約登録エラー:', error);
+      alert(error instanceof Error ? error.message : '予約の登録に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // 時間選択肢の生成
@@ -251,6 +309,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 type="button"
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2"
                 onClick={() => router.push('/calendar')}
+                disabled={isSubmitting}
               >
                 キャンセル
               </button>
@@ -258,7 +317,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
                 onClick={() => setStep(2)}
-                disabled={!formData.customerId}
+                disabled={!formData.customerId || isSubmitting}
               >
                 次へ
               </button>
@@ -283,6 +342,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                   value={formData.date}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isSubmitting}
                 >
                   {generateDateOptions()}
                 </select>
@@ -295,6 +355,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                   value={formData.time}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isSubmitting}
                 >
                   {generateTimeOptions()}
                 </select>
@@ -306,6 +367,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 type="button"
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2"
                 onClick={() => setStep(1)}
+                disabled={isSubmitting}
               >
                 戻る
               </button>
@@ -313,6 +375,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
                 onClick={() => setStep(3)}
+                disabled={isSubmitting}
               >
                 次へ
               </button>
@@ -342,8 +405,8 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                       formData.selectedServices.includes(service.id) 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                    onClick={() => handleServiceChange(service.id)}
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => !isSubmitting && handleServiceChange(service.id)}
                   >
                     <div className="flex justify-between">
                       <span className="font-medium">{service.name}</span>
@@ -381,6 +444,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 placeholder="特記事項があればご記入ください"
+                disabled={isSubmitting}
               ></textarea>
             </div>
             
@@ -389,15 +453,20 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                 type="button"
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2"
                 onClick={() => setStep(2)}
+                disabled={isSubmitting}
               >
                 戻る
               </button>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                disabled={formData.selectedServices.length === 0}
+                className={`px-4 py-2 rounded-md ${
+                  isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white`}
+                disabled={formData.selectedServices.length === 0 || isSubmitting}
               >
-                予約を登録
+                {isSubmitting ? '登録中...' : '予約を登録'}
               </button>
             </div>
           </div>
