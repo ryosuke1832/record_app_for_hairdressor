@@ -178,6 +178,29 @@
       "status": "scheduled",
       "createdAt": "2025-05-25T00:00:09.906Z",
       "updatedAt": "2025-05-25T00:00:09.906Z"
+    },
+    {
+      "id": "8",
+      "title": "カット",
+      "start": "2025-05-25T23:00:00.000Z",
+      "end": "2025-05-25T23:40:00.000Z",
+      "clientId": "5",
+      "clientName": "渡辺 大輔",
+      "phone": "090-3698-7412",
+      "services": [
+        {
+          "id": "1",
+          "name": "カット",
+          "duration": 40,
+          "price": 4500
+        }
+      ],
+      "totalPrice": 4500,
+      "totalDuration": 40,
+      "note": "",
+      "status": "scheduled",
+      "createdAt": "2025-05-25T00:07:40.800Z",
+      "updatedAt": "2025-05-25T00:07:40.800Z"
     }
   ]
 }
