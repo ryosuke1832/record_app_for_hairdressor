@@ -152,9 +152,9 @@
       "totalPrice": 2000,
       "totalDuration": 20,
       "note": "",
-      "status": "scheduled",
+      "status": "cancelled",
       "createdAt": "2025-05-24T23:59:46.314Z",
-      "updatedAt": "2025-05-24T23:59:46.314Z"
+      "updatedAt": "2025-05-25T00:13:58.222Z"
     },
     {
       "id": "7",
@@ -181,9 +181,9 @@
     },
     {
       "id": "8",
-      "title": "カット",
+      "title": "カット & カラー & パーマ & トリートメント & ヘッドスパ & シャンプー・ブロー",
       "start": "2025-05-25T23:00:00.000Z",
-      "end": "2025-05-25T23:40:00.000Z",
+      "end": "2025-05-26T04:40:00.000Z",
       "clientId": "5",
       "clientName": "渡辺 大輔",
       "phone": "090-3698-7412",
@@ -193,14 +193,44 @@
           "name": "カット",
           "duration": 40,
           "price": 4500
+        },
+        {
+          "id": "2",
+          "name": "カラー",
+          "duration": 90,
+          "price": 8000
+        },
+        {
+          "id": "3",
+          "name": "パーマ",
+          "duration": 120,
+          "price": 12000
+        },
+        {
+          "id": "4",
+          "name": "トリートメント",
+          "duration": 30,
+          "price": 3000
+        },
+        {
+          "id": "5",
+          "name": "ヘッドスパ",
+          "duration": 40,
+          "price": 5000
+        },
+        {
+          "id": "6",
+          "name": "シャンプー・ブロー",
+          "duration": 20,
+          "price": 2000
         }
       ],
-      "totalPrice": 4500,
-      "totalDuration": 40,
+      "totalPrice": 34500,
+      "totalDuration": 340,
       "note": "",
-      "status": "scheduled",
+      "status": "completed",
       "createdAt": "2025-05-25T00:07:40.800Z",
-      "updatedAt": "2025-05-25T00:07:40.800Z"
+      "updatedAt": "2025-05-25T00:13:07.681Z"
     }
   ]
 }
