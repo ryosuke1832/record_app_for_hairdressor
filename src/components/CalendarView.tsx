@@ -207,9 +207,9 @@ export default function CalendarView() {
       return (
         <div 
           key={appointment.id}
-          className={`${getAppointmentColor(appointment.status)} text-white rounded p-1 text-xs cursor-pointer hover:opacity-90 absolute w-full`}
+          className={`${getAppointmentColor(appointment.status)} text-white rounded-sm p-1 cursor-pointer hover:opacity-90 absolute w-full overflow-hidden`}
           style={{
-            height: `${heightInSlots * 100}%`,
+            height: `${Math.max(heightInSlots * 100, 100)}%`,
             zIndex: 10
           }}
           onClick={(e) => {
@@ -217,11 +217,16 @@ export default function CalendarView() {
             handleAppointmentClick(appointment.id);
           }}
         >
-          <div className="font-bold truncate">{appointment.title}</div>
-          <div className="truncate">{appointment.clientName}</div>
-          <div className="text-xs">
-            {format(appointmentStart, 'HH:mm')} - {format(appointmentEnd, 'HH:mm')}
+          {/* 顧客名のみ表示（スマホ対応） */}
+          <div className="text-xs font-medium truncate leading-tight">
+            {appointment.clientName}
           </div>
+          {/* 高さが十分にある場合のみ追加情報を表示 */}
+          {heightInSlots >= 2 && (
+            <div className="text-xs opacity-90 truncate leading-tight">
+              {appointment.title}
+            </div>
+          )}
         </div>
       );
     });
@@ -430,7 +435,7 @@ export default function CalendarView() {
                 }}
               >
                 {/* 時間表示 */}
-                <div className={`p-1 text-right text-xs text-gray-500 border-r border-gray-300 flex items-center justify-end ${
+                <div className={`p-1 text-right text-xs text-gray-500 border-r border-gray-300 flex items-start justify-end ${
                   !isMainHour ? 'text-gray-400' : ''
                 }`}>
                   {isMainHour || settings.timeSlotInterval >= 30 ? formatTimeSlot(timeSlot) : ''}
