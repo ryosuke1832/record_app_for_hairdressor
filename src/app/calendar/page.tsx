@@ -6,7 +6,7 @@ export default function CalendarPage() {
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-background pt-4">
+      <main className="min-h-screen bg-background">
         <CalendarView />
       </main>
     </>

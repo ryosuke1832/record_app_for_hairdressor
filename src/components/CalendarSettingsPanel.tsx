@@ -391,7 +391,7 @@ export default function CalendarSettingsPanel({
         <div className="px-6 py-4 border-t border-gray-200 flex justify-between">
           <button
             onClick={handleReset}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+            className="px-3 py-2 text-gray-600 hover:text-gray-800 font-medium"
           >
             リセット
           </button>
@@ -399,13 +399,13 @@ export default function CalendarSettingsPanel({
           <div className="flex space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              className="px-3 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
             >
               キャンセル
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               設定を保存
             </button>
