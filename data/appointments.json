@@ -178,7 +178,29 @@
       "status": "scheduled",
       "createdAt": "2025-05-25T00:00:09.906Z",
       "updatedAt": "2025-05-25T00:00:09.906Z"
+    },
+    {
+      "id": "8",
+      "title": "カット",
+      "start": "2025-05-27T00:00:00.000Z",
+      "end": "2025-05-27T00:50:00.000Z",
+      "clientId": "1",
+      "clientName": "田中 さくら",
+      "phone": "090-1234-5678",
+      "services": [
+        {
+          "id": "1",
+          "name": "カット",
+          "duration": 50,
+          "price": 5000
+        }
+      ],
+      "totalPrice": 5000,
+      "totalDuration": 50,
+      "note": "",
+      "status": "scheduled",
+      "createdAt": "2025-05-26T11:02:35.074Z",
+      "updatedAt": "2025-05-26T11:02:35.074Z"
     }
-    
   ]
 }

@@ -1,13 +1,16 @@
-// src/components/AppointmentForm.tsx
+// src/components/AppointmentForm.tsx - 完全版
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, addDays, setHours, setMinutes, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { AdjustableService, Customer, Service } from '@/types/appointment';
+import BulkAdjustmentModal from './BulkAdjustmentModal';
+import CustomerSuggestionsModal from './CustomerSuggestionsModal';
 
-// 仮の顧客データ
-const DUMMY_CUSTOMERS = [
+// 基本データ型定義
+const DUMMY_CUSTOMERS: Customer[] = [
   { id: '1', name: '田中 さくら', kana: 'タナカ サクラ', phone: '090-1234-5678' },
   { id: '2', name: '佐藤 健太', kana: 'サトウ ケンタ', phone: '090-8765-4321' },
   { id: '3', name: '鈴木 めぐみ', kana: 'スズキ メグミ', phone: '090-2468-1357' },
@@ -15,8 +18,7 @@ const DUMMY_CUSTOMERS = [
   { id: '5', name: '渡辺 大輔', kana: 'ワタナベ ダイスケ', phone: '090-3698-7412' },
 ];
 
-// 仮の施術メニューデータ
-const DUMMY_SERVICES = [
+const DUMMY_SERVICES: Service[] = [
   { id: '1', name: 'カット', duration: 40, price: 4500 },
   { id: '2', name: 'カラー', duration: 90, price: 8000 },
   { id: '3', name: 'パーマ', duration: 120, price: 12000 },
@@ -25,16 +27,9 @@ const DUMMY_SERVICES = [
   { id: '6', name: 'シャンプー・ブロー', duration: 20, price: 2000 },
 ];
 
-// 予約可能時間枠（営業時間）
-const BUSINESS_HOURS = {
-  start: 9, // 9:00
-  end: 19,  // 19:00（最終予約）
-};
-
-// 予約時間枠の間隔（分）
+const BUSINESS_HOURS = { start: 9, end: 19 };
 const TIME_SLOT_INTERVAL = 30;
 
-// プロップスの型定義
 type AppointmentFormProps = {
   initialDate?: string | null;
   initialTime?: string | null;
@@ -44,6 +39,8 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // フォームデータ
   const [formData, setFormData] = useState({
     customerId: '',
     customerName: '',
@@ -52,16 +49,21 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
     selectedServices: [] as string[],
     note: '',
   });
+  
+  // サービス関連の状態
+  const [adjustableServices, setAdjustableServices] = useState<AdjustableService[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
-
-  // 初期値が設定されている場合の処理
-  useEffect(() => {
-    if (initialDate || initialTime) {
-      console.log('初期値が設定されています:', { initialDate, initialTime });
-    }
-  }, [initialDate, initialTime]);
+  
+  // モーダル制御
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState<string | null>(null);
+  const [showBulkAdjustment, setShowBulkAdjustment] = useState(false);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  
+  // 顧客履歴データ
+  const [customerHistory, setCustomerHistory] = useState<any[]>([]);
+  const [hasSuggestions, setHasSuggestions] = useState(false);
 
   // 顧客フィルタリング
   const filteredCustomers = DUMMY_CUSTOMERS.filter(
@@ -71,35 +73,124 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
       customer.phone.includes(searchQuery)
   );
 
-  // 選択中のサービスの計算
-  const calculateTotals = (selectedIds: string[]) => {
-    const selectedServices = DUMMY_SERVICES.filter(service => 
-      selectedIds.includes(service.id)
-    );
+  // 顧客が選択されたときに履歴を取得
+  useEffect(() => {
+    if (formData.customerId) {
+      fetchCustomerHistory(formData.customerId);
+    }
+  }, [formData.customerId]);
+
+  // 顧客履歴を取得
+  const fetchCustomerHistory = async (customerId: string) => {
+    try {
+      const response = await fetch(`/api/customers/${customerId}/history?completedOnly=true`);
+      if (response.ok) {
+        const history = await response.json();
+        setCustomerHistory(history);
+        
+        // 提案があるかチェック
+        const hasAdjustmentHistory = history.some((apt: any) => 
+          apt.services.some((service: any) => {
+            const baseService = DUMMY_SERVICES.find(s => s.id === service.id);
+            return baseService && (
+              service.duration !== baseService.duration || 
+              service.price !== baseService.price
+            );
+          })
+        );
+        setHasSuggestions(hasAdjustmentHistory);
+      }
+    } catch (error) {
+      console.error('履歴取得エラー:', error);
+    }
+  };
+
+  // サービス選択の変更
+  const handleServiceChange = (serviceId: string) => {
+    let newSelectedServices;
+    let newAdjustableServices = [...adjustableServices];
     
-    const price = selectedServices.reduce((sum, service) => sum + service.price, 0);
-    const duration = selectedServices.reduce((sum, service) => sum + service.duration, 0);
+    if (formData.selectedServices.includes(serviceId)) {
+      newSelectedServices = formData.selectedServices.filter(id => id !== serviceId);
+      newAdjustableServices = newAdjustableServices.filter(s => s.id !== serviceId);
+    } else {
+      newSelectedServices = [...formData.selectedServices, serviceId];
+      const baseService = DUMMY_SERVICES.find(s => s.id === serviceId);
+      if (baseService) {
+        newAdjustableServices.push({
+          id: serviceId,
+          name: baseService.name,
+          baseDuration: baseService.duration,
+          adjustedDuration: baseService.duration,
+          basePrice: baseService.price,
+          adjustedPrice: baseService.price,
+          isAdjusted: false
+        });
+      }
+    }
     
+    setFormData({ ...formData, selectedServices: newSelectedServices });
+    setAdjustableServices(newAdjustableServices);
+    calculateTotals(newAdjustableServices);
+  };
+
+  // 合計計算
+  const calculateTotals = (services: AdjustableService[]) => {
+    const price = services.reduce((sum, service) => sum + service.adjustedPrice, 0);
+    const duration = services.reduce((sum, service) => sum + service.adjustedDuration, 0);
     setTotalPrice(price);
     setTotalDuration(duration);
   };
 
-  // サービス選択の変更ハンドラ
-  const handleServiceChange = (serviceId: string) => {
-    let newSelectedServices;
-    
-    if (formData.selectedServices.includes(serviceId)) {
-      newSelectedServices = formData.selectedServices.filter(id => id !== serviceId);
-    } else {
-      newSelectedServices = [...formData.selectedServices, serviceId];
-    }
-    
-    setFormData({
-      ...formData,
-      selectedServices: newSelectedServices
+  // 個別サービス調整の保存
+  const handleServiceAdjustment = (serviceId: string, newDuration: number, newPrice: number, reason?: string) => {
+    const updatedServices = adjustableServices.map(service => {
+      if (service.id === serviceId) {
+        return {
+          ...service,
+          adjustedDuration: newDuration,
+          adjustedPrice: newPrice,
+          isAdjusted: newDuration !== service.baseDuration || newPrice !== service.basePrice,
+          adjustmentReason: reason
+        };
+      }
+      return service;
     });
     
-    calculateTotals(newSelectedServices);
+    setAdjustableServices(updatedServices);
+    calculateTotals(updatedServices);
+    setShowAdjustmentModal(null);
+  };
+
+  // サービス調整のリセット
+  const handleResetService = (serviceId: string) => {
+    const updatedServices = adjustableServices.map(service => {
+      if (service.id === serviceId) {
+        return {
+          ...service,
+          adjustedDuration: service.baseDuration,
+          adjustedPrice: service.basePrice,
+          isAdjusted: false,
+          adjustmentReason: undefined
+        };
+      }
+      return service;
+    });
+    
+    setAdjustableServices(updatedServices);
+    calculateTotals(updatedServices);
+  };
+
+  // 一括調整の適用
+  const handleBulkAdjustment = (adjustedServices: AdjustableService[]) => {
+    setAdjustableServices(adjustedServices);
+    calculateTotals(adjustedServices);
+  };
+
+  // 履歴提案の適用
+  const handleApplySuggestions = (suggestedServices: AdjustableService[]) => {
+    setAdjustableServices(suggestedServices);
+    calculateTotals(suggestedServices);
   };
 
   // 顧客選択ハンドラ
@@ -115,39 +206,32 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
   // フォーム入力ハンドラ
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    setFormData({ ...formData, [name]: value });
   };
 
-  // フォーム送信ハンドラ
+  // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSubmitting) return; // 二重送信防止
-    
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      // 選択されたサービスデータを取得
-      const selectedServices = DUMMY_SERVICES.filter(service => 
-        formData.selectedServices.includes(service.id)
-      );
+      const selectedServices = adjustableServices.map(service => ({
+        id: service.id,
+        name: service.name,
+        duration: service.adjustedDuration,
+        price: service.adjustedPrice
+      }));
 
-      // 開始時間を作成
       const [startHour, startMinute] = formData.time.split(':').map(Number);
       const startDate = new Date(`${formData.date}T00:00:00`);
       const start = setMinutes(setHours(startDate, startHour), startMinute);
-      
-      // 終了時間を計算
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + totalDuration);
 
-      // 顧客情報を取得
       const selectedCustomer = DUMMY_CUSTOMERS.find(customer => customer.id === formData.customerId);
       
-      // APIに送信するデータを作成
       const appointmentData = {
         clientName: formData.customerName,
         phone: selectedCustomer?.phone || '',
@@ -160,12 +244,9 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
         clientId: formData.customerId
       };
 
-      // APIに予約データを送信
       const response = await fetch('/api/appointments', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(appointmentData),
       });
 
@@ -173,13 +254,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
         throw new Error('予約の登録に失敗しました');
       }
 
-      const createdAppointment = await response.json();
-      console.log('予約が作成されました:', createdAppointment);
-
-      // 成功メッセージを表示
       alert('予約が登録されました');
-      
-      // カレンダー画面に戻る
       router.push('/calendar');
       
     } catch (error) {
@@ -197,16 +272,14 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
       for (let minute = 0; minute < 60; minute += TIME_SLOT_INTERVAL) {
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         options.push(
-          <option key={timeString} value={timeString}>
-            {timeString}
-          </option>
+          <option key={timeString} value={timeString}>{timeString}</option>
         );
       }
     }
     return options;
   };
 
-  // 日付選択肢の生成（今日から14日間）
+  // 日付選択肢の生成
   const generateDateOptions = () => {
     const options = [];
     const today = new Date();
@@ -217,12 +290,9 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
       const dateLabel = format(date, 'yyyy年M月d日(E)', { locale: ja });
       
       options.push(
-        <option key={dateValue} value={dateValue}>
-          {dateLabel}
-        </option>
+        <option key={dateValue} value={dateValue}>{dateLabel}</option>
       );
     }
-    
     return options;
   };
 
@@ -243,27 +313,115 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
     }
   };
 
+  // 個別調整モーダル
+  const ServiceAdjustmentModal = ({ serviceId }: { serviceId: string }) => {
+    const service = adjustableServices.find(s => s.id === serviceId);
+    if (!service) return null;
+
+    const [duration, setDuration] = useState(service.adjustedDuration);
+    const [price, setPrice] = useState(service.adjustedPrice);
+    const [reason, setReason] = useState(service.adjustmentReason || '');
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h3 className="text-lg font-semibold mb-4">{service.name} の調整</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                所要時間（分）
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  min="5"
+                  max="300"
+                  step="5"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-500">
+                  (標準: {service.baseDuration}分)
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                料金（円）
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(parseInt(e.target.value))}
+                  min="0"
+                  step="100"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-500">
+                  (標準: {service.basePrice.toLocaleString()}円)
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                調整理由
+              </label>
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="例: 初回来店のため、髪が長いため"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              onClick={() => setShowAdjustmentModal(null)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={() => handleResetService(serviceId)}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+            >
+              標準に戻す
+            </button>
+            <button
+              onClick={() => handleServiceAdjustment(serviceId, duration, price, reason)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
+      {/* プログレスインジケーター */}
       <div className="mb-6">
         <div className="flex items-center mb-4">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
             step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}>
-            1
-          </div>
+          }`}>1</div>
           <div className={`h-1 w-12 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
             step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}>
-            2
-          </div>
+          }`}>2</div>
           <div className={`h-1 w-12 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
             step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}>
-            3
-          </div>
+          }`}>3</div>
         </div>
       </div>
 
@@ -298,9 +456,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
                   ))}
                 </ul>
               ) : (
-                <div className="p-4 text-center text-gray-500">
-                  顧客が見つかりません
-                </div>
+                <div className="p-4 text-center text-gray-500">顧客が見つかりません</div>
               )}
             </div>
             
@@ -383,10 +539,37 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
           </div>
         )}
 
-        {/* ステップ3: サービス選択と確認 */}
+        {/* ステップ3: サービス選択と調整 */}
         {step === 3 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">施術内容を選択</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">施術内容を選択・調整</h2>
+              
+              {/* 調整機能ボタン */}
+              <div className="flex space-x-2">
+                {hasSuggestions && formData.selectedServices.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerSuggestions(true)}
+                    className="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded text-sm"
+                    disabled={isSubmitting}
+                  >
+                    📋 過去の実績
+                  </button>
+                )}
+                
+                {formData.selectedServices.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkAdjustment(true)}
+                    className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1 rounded text-sm"
+                    disabled={isSubmitting}
+                  >
+                    🔧 一括調整
+                  </button>
+                )}
+              </div>
+            </div>
             
             <div className="mb-4">
               <p className="font-medium mb-2">顧客: {formData.customerName}</p>
@@ -398,43 +581,143 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">施術メニュー</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {DUMMY_SERVICES.map(service => (
-                  <div 
-                    key={service.id}
-                    className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                      formData.selectedServices.includes(service.id) 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:bg-gray-50'
-                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onClick={() => !isSubmitting && handleServiceChange(service.id)}
-                  >
-                    <div className="flex justify-between">
-                      <span className="font-medium">{service.name}</span>
-                      <span className="text-gray-600">{service.price.toLocaleString()}円</span>
+                {DUMMY_SERVICES.map(service => {
+                  const isSelected = formData.selectedServices.includes(service.id);
+                  const adjustedService = adjustableServices.find(s => s.id === service.id);
+                  
+                  return (
+                    <div 
+                      key={service.id}
+                      className={`border rounded-md p-3 transition-colors ${
+                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                      } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div 
+                        className="cursor-pointer"
+                        onClick={() => !isSubmitting && handleServiceChange(service.id)}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium">{service.name}</span>
+                          <div className="text-right">
+                            {adjustedService && adjustedService.isAdjusted ? (
+                              <>
+                                <div className="text-sm line-through text-gray-500">
+                                  {service.price.toLocaleString()}円
+                                </div>
+                                <div className="text-blue-600 font-medium">
+                                  {adjustedService.adjustedPrice.toLocaleString()}円
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-600">{service.price.toLocaleString()}円</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          所要時間: 
+                          {adjustedService && adjustedService.isAdjusted ? (
+                            <>
+                              <span className="line-through mr-1">{service.duration}分</span>
+                              <span className="text-blue-600 font-medium">
+                                {adjustedService.adjustedDuration}分
+                              </span>
+                            </>
+                          ) : (
+                            <span>{service.duration}分</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* 調整コントロール */}
+                      {isSelected && (
+                        <div className="mt-3 pt-2 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                              {adjustedService?.isAdjusted && (
+                                <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                                  調整済み
+                                </span>
+                              )}
+                              {adjustedService?.adjustmentReason && (
+                                <span className="text-xs text-gray-500" title={adjustedService.adjustmentReason}>
+                                  💡 {adjustedService.adjustmentReason.slice(0, 10)}...
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-x-1">
+                              {adjustedService?.isAdjusted && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetService(service.id)}
+                                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded"
+                                  disabled={isSubmitting}
+                                >
+                                  リセット
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setShowAdjustmentModal(service.id)}
+                                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded"
+                                disabled={isSubmitting}
+                              >
+                                🔧 調整
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-sm text-gray-500">所要時間: {service.duration}分</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
+            {/* 合計情報 */}
             {formData.selectedServices.length > 0 && (
               <div className="mb-4 p-4 bg-gray-50 rounded-md">
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">合計金額:</span>
-                  <span className="font-medium">{totalPrice.toLocaleString()}円</span>
+                  <span className="font-medium text-lg">{totalPrice.toLocaleString()}円</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="font-medium">所要時間:</span>
-                  <span className="font-medium">{totalDuration}分</span>
+                  <span className="font-medium text-lg">{totalDuration}分</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">終了予定時刻:</span>
-                  <span className="font-medium">{calculateEndTime()}</span>
+                  <span className="font-medium text-lg">{calculateEndTime()}</span>
                 </div>
+                
+                {/* 調整サマリー */}
+                {adjustableServices.some(s => s.isAdjusted) && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="text-sm text-gray-600 mb-2">調整内容:</div>
+                    {adjustableServices.filter(s => s.isAdjusted).map(service => (
+                      <div key={service.id} className="text-xs text-gray-500 flex justify-between">
+                        <span>{service.name}</span>
+                        <span>
+                          {service.adjustedPrice !== service.basePrice && (
+                            <span className="mr-2">
+                              {service.adjustedPrice > service.basePrice ? '+' : ''}
+                              {(service.adjustedPrice - service.basePrice).toLocaleString()}円
+                            </span>
+                          )}
+                          {service.adjustedDuration !== service.baseDuration && (
+                            <span>
+                              {service.adjustedDuration > service.baseDuration ? '+' : ''}
+                              {service.adjustedDuration - service.baseDuration}分
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             
+            {/* 備考 */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">備考</label>
               <textarea
@@ -448,7 +731,19 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
               ></textarea>
             </div>
             
-            <div className="mt-4 text-right">
+            {/* 警告メッセージ */}
+            {totalDuration > 180 && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="flex items-center">
+                  <span className="text-yellow-600 mr-2">⚠️</span>
+                  <span className="text-sm text-yellow-700">
+                    施術時間が3時間を超えています。お客様の負担と予約枠の調整にご注意ください。
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-6 text-right">
               <button
                 type="button"
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2"
@@ -459,7 +754,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
               </button>
               <button
                 type="submit"
-                className={`px-4 py-2 rounded-md ${
+                className={`px-6 py-2 rounded-md font-medium ${
                   isSubmitting 
                     ? 'bg-gray-400 cursor-not-allowed' 
                     : 'bg-blue-600 hover:bg-blue-700'
@@ -472,6 +767,28 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
           </div>
         )}
       </form>
+
+      {/* モーダル群 */}
+      {showAdjustmentModal && (
+        <ServiceAdjustmentModal serviceId={showAdjustmentModal} />
+      )}
+
+      {showBulkAdjustment && (
+        <BulkAdjustmentModal
+          selectedServices={adjustableServices}
+          onBulkAdjustment={handleBulkAdjustment}
+          onClose={() => setShowBulkAdjustment(false)}
+        />
+      )}
+
+      {showCustomerSuggestions && (
+        <CustomerSuggestionsModal
+          customerId={formData.customerId}
+          selectedServices={adjustableServices}
+          onApplySuggestions={handleApplySuggestions}
+          onClose={() => setShowCustomerSuggestions(false)}
+        />
+      )}
     </div>
   );
 }
