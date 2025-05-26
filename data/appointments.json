@@ -201,6 +201,34 @@
       "status": "scheduled",
       "createdAt": "2025-05-26T11:02:35.074Z",
       "updatedAt": "2025-05-26T11:02:35.074Z"
+    },
+    {
+      "id": "9",
+      "title": "アップスタイル",
+      "start": "2025-05-28T00:00:00.000Z",
+      "end": "2025-05-28T00:45:00.000Z",
+      "clientId": "4",
+      "clientName": "伊藤 陽子",
+      "phone": "090-1357-2468",
+      "services": [
+        {
+          "id": "14",
+          "name": "アップスタイル",
+          "duration": 45,
+          "price": 5000,
+          "category": "スタイリング",
+          "description": "結婚式などのアップスタイル",
+          "isActive": true,
+          "createdAt": "2024-01-01T10:00:00.000Z",
+          "updatedAt": "2024-01-01T10:00:00.000Z"
+        }
+      ],
+      "totalPrice": 5000,
+      "totalDuration": 45,
+      "note": "",
+      "status": "scheduled",
+      "createdAt": "2025-05-26T11:28:02.473Z",
+      "updatedAt": "2025-05-26T11:28:02.473Z"
     }
   ]
 }
