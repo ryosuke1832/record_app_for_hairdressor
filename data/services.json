@@ -1,0 +1,169 @@
+{
+  "services": [
+    {
+      "id": "1",
+      "name": "カット",
+      "duration": 40,
+      "price": 4500,
+      "category": "基本メニュー",
+      "description": "カットのみ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "name": "カラー",
+      "duration": 90,
+      "price": 8000,
+      "category": "カラーメニュー",
+      "description": "全体カラー",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "3",
+      "name": "パーマ",
+      "duration": 120,
+      "price": 12000,
+      "category": "パーマメニュー",
+      "description": "全体パーマ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "4",
+      "name": "トリートメント",
+      "duration": 30,
+      "price": 3000,
+      "category": "ケアメニュー",
+      "description": "髪質改善トリートメント",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "5",
+      "name": "ヘッドスパ",
+      "duration": 40,
+      "price": 5000,
+      "category": "ケアメニュー",
+      "description": "リラクゼーション",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "6",
+      "name": "シャンプー・ブロー",
+      "duration": 20,
+      "price": 2000,
+      "category": "基本メニュー",
+      "description": "シャンプー・ブロー仕上げ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "7",
+      "name": "リタッチカラー",
+      "duration": 60,
+      "price": 6000,
+      "category": "カラーメニュー",
+      "description": "根元のみのカラーリング",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "8",
+      "name": "ハイライト",
+      "duration": 120,
+      "price": 10000,
+      "category": "カラーメニュー",
+      "description": "部分的な明るいカラー",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "9",
+      "name": "デジタルパーマ",
+      "duration": 150,
+      "price": 15000,
+      "category": "パーマメニュー",
+      "description": "熱を使用したパーマ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "10",
+      "name": "ストレートパーマ",
+      "duration": 180,
+      "price": 18000,
+      "category": "パーマメニュー",
+      "description": "髪をストレートにするパーマ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "11",
+      "name": "縮毛矯正",
+      "duration": 240,
+      "price": 25000,
+      "category": "パーマメニュー",
+      "description": "くせ毛を根本的に伸ばす施術",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "12",
+      "name": "前髪カット",
+      "duration": 15,
+      "price": 1000,
+      "category": "基本メニュー",
+      "description": "前髪のみのカット",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "13",
+      "name": "セット・スタイリング",
+      "duration": 30,
+      "price": 3500,
+      "category": "スタイリング",
+      "description": "特別な日のヘアセット",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "14",
+      "name": "アップスタイル",
+      "duration": 45,
+      "price": 5000,
+      "category": "スタイリング",
+      "description": "結婚式などのアップスタイル",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    },
+    {
+      "id": "15",
+      "name": "眉カット",
+      "duration": 10,
+      "price": 800,
+      "category": "その他",
+      "description": "眉毛のカットとシェイプ",
+      "isActive": true,
+      "createdAt": "2024-01-01T10:00:00.000Z",
+      "updatedAt": "2024-01-01T10:00:00.000Z"
+    }
+  ]
+}

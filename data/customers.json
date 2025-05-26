@@ -1,188 +1,256 @@
 {
-    "customers": [
-      {
-        "id": "1",
-        "name": "田中 さくら",
-        "kana": "タナカ サクラ",
-        "phone": "090-1234-5678",
-        "email": "sakura.tanaka@example.com",
-        "birthday": "1990-03-15",
-        "gender": "female",
-        "address": "東京都渋谷区恵比寿1-2-3",
-        "memo": "アッシュ系のカラーがお好み。アレルギーなし。",
-        "createdAt": "2024-01-15T10:00:00.000Z",
-        "updatedAt": "2024-12-20T14:30:00.000Z",
-        "totalVisits": 12,
-        "lastVisit": "2025-01-20T10:00:00.000Z",
-        "totalSpent": 150000,
-        "averageSpent": 12500,
-        "preferences": {
-          "hairType": "細い髪",
-          "favoriteServices": ["カット", "カラー"],
-          "allergyInfo": "なし",
-          "skinType": "敏感肌"
-        }
-      },
-      {
-        "id": "2",
-        "name": "佐藤 健太",
-        "kana": "サトウ ケンタ",
-        "phone": "090-8765-4321",
-        "email": "kenta.sato@example.com",
-        "birthday": "1985-07-22",
-        "gender": "male",
-        "address": "東京都新宿区西新宿2-4-5",
-        "memo": "短髪スタイル希望。月1回来店。",
-        "createdAt": "2024-02-10T11:00:00.000Z",
-        "updatedAt": "2025-01-18T16:45:00.000Z",
-        "totalVisits": 18,
-        "lastVisit": "2025-01-18T14:00:00.000Z",
-        "totalSpent": 108000,
-        "averageSpent": 6000,
-        "preferences": {
-          "hairType": "太い髪",
-          "favoriteServices": ["カット", "シャンプー・ブロー"],
-          "allergyInfo": "なし",
-          "skinType": "普通"
-        }
-      },
-      {
-        "id": "3",
-        "name": "鈴木 めぐみ",
-        "kana": "スズキ メグミ",
-        "phone": "090-2468-1357",
-        "email": "megumi.suzuki@example.com",
-        "birthday": "1992-11-08",
-        "gender": "female",
-        "address": "東京都港区六本木3-7-9",
-        "memo": "ロングヘア。トリートメント重視。",
-        "createdAt": "2024-03-05T09:30:00.000Z",
-        "updatedAt": "2025-01-10T12:15:00.000Z",
-        "totalVisits": 8,
-        "lastVisit": "2025-01-10T11:00:00.000Z",
-        "totalSpent": 96000,
-        "averageSpent": 12000,
-        "preferences": {
-          "hairType": "普通",
-          "favoriteServices": ["トリートメント", "ヘッドスパ"],
-          "allergyInfo": "なし",
-          "skinType": "乾燥肌"
-        }
-      },
-      {
-        "id": "4",
-        "name": "伊藤 陽子",
-        "kana": "イトウ ヨウコ",
-        "phone": "090-1357-2468",
-        "email": "yoko.ito@example.com",
-        "birthday": "1988-05-30",
-        "gender": "female",
-        "address": "東京都品川区品川1-5-8",
-        "memo": "ショートヘア。明るい色は避けたい。",
-        "createdAt": "2024-04-12T14:20:00.000Z",
-        "updatedAt": "2024-12-25T10:30:00.000Z",
-        "totalVisits": 6,
-        "lastVisit": "2024-12-25T15:30:00.000Z",
-        "totalSpent": 45000,
-        "averageSpent": 7500,
-        "preferences": {
-          "hairType": "くせ毛",
-          "favoriteServices": ["カット"],
-          "allergyInfo": "化学薬品に軽度のアレルギー",
-          "skinType": "敏感肌"
-        }
-      },
-      {
-        "id": "5",
-        "name": "渡辺 大輔",
-        "kana": "ワタナベ ダイスケ",
-        "phone": "090-3698-7412",
-        "email": "daisuke.watanabe@example.com",
-        "birthday": "1993-12-03",
-        "gender": "male",
-        "address": "東京都中央区銀座4-6-12",
-        "memo": "ビジネスマン。清潔感重視。",
-        "createdAt": "2024-05-20T16:45:00.000Z",
-        "updatedAt": "2025-01-15T13:20:00.000Z",
-        "totalVisits": 10,
-        "lastVisit": "2025-01-15T13:00:00.000Z",
-        "totalSpent": 80000,
-        "averageSpent": 8000,
-        "preferences": {
-          "hairType": "普通",
-          "favoriteServices": ["カット", "トリートメント"],
-          "allergyInfo": "なし",
-          "skinType": "普通"
-        }
-      },
-      {
-        "id": "6",
-        "name": "高橋 美咲",
-        "kana": "タカハシ ミサキ",
-        "phone": "090-7531-9642",
-        "email": "misaki.takahashi@example.com",
-        "birthday": "1995-08-17",
-        "gender": "female",
-        "address": "東京都世田谷区三軒茶屋2-3-4",
-        "memo": "学生。カジュアルなスタイル希望。",
-        "createdAt": "2024-06-18T11:15:00.000Z",
-        "updatedAt": "2024-11-30T15:45:00.000Z",
-        "totalVisits": 4,
-        "lastVisit": "2024-11-30T13:00:00.000Z",
-        "totalSpent": 28000,
-        "averageSpent": 7000,
-        "preferences": {
-          "hairType": "細い髪",
-          "favoriteServices": ["カット", "カラー"],
-          "allergyInfo": "なし",
-          "skinType": "普通"
-        }
-      },
-      {
-        "id": "7",
-        "name": "小林 雄一",
-        "kana": "コバヤシ ユウイチ",
-        "phone": "090-8642-3157",
-        "email": "yuichi.kobayashi@example.com",
-        "birthday": "1980-01-25",
-        "gender": "male",
-        "address": "東京都練馬区練馬1-8-6",
-        "memo": "薄毛が気になる。ボリュームアップ希望。",
-        "createdAt": "2024-07-22T09:00:00.000Z",
-        "updatedAt": "2024-12-15T11:30:00.000Z",
-        "totalVisits": 7,
-        "lastVisit": "2024-12-15T10:00:00.000Z",
-        "totalSpent": 63000,
-        "averageSpent": 9000,
-        "preferences": {
-          "hairType": "薄毛",
-          "favoriteServices": ["カット", "ヘッドスパ"],
-          "allergyInfo": "なし",
-          "skinType": "脂性肌"
-        }
-      },
-      {
-        "id": "8",
-        "name": "松本 千春",
-        "kana": "マツモト チハル",
-        "phone": "090-5284-7193",
-        "email": "chiharu.matsumoto@example.com",
-        "birthday": "1987-09-12",
-        "gender": "female",
-        "address": "東京都杉並区阿佐ヶ谷3-5-7",
-        "memo": "妊娠中。カラーやパーマは控えている。",
-        "createdAt": "2024-08-30T13:40:00.000Z",
-        "updatedAt": "2025-01-05T16:20:00.000Z",
-        "totalVisits": 3,
-        "lastVisit": "2025-01-05T14:00:00.000Z",
-        "totalSpent": 21000,
-        "averageSpent": 7000,
-        "preferences": {
-          "hairType": "普通",
-          "favoriteServices": ["カット", "シャンプー・ブロー"],
-          "allergyInfo": "妊娠中のため化学薬品使用不可",
-          "skinType": "敏感肌"
-        }
+  "customers": [
+    {
+      "id": "1",
+      "name": "田中 さくら",
+      "kana": "タナカ サクラ",
+      "phone": "090-1234-5678",
+      "email": "sakura.tanaka@example.com",
+      "birthday": "1990-03-15",
+      "gender": "female",
+      "address": "東京都渋谷区恵比寿1-2-3",
+      "memo": "アッシュ系のカラーがお好み。アレルギーなし。",
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-12-20T14:30:00.000Z",
+      "totalVisits": 12,
+      "lastVisit": "2025-01-20T10:00:00.000Z",
+      "totalSpent": 150000,
+      "averageSpent": 12500,
+      "preferences": {
+        "hairType": "細い髪",
+        "favoriteServices": [
+          "カット",
+          "カラー"
+        ],
+        "allergyInfo": "なし",
+        "skinType": "敏感肌"
       }
-    ]
-  }
+    },
+    {
+      "id": "2",
+      "name": "佐藤 健太",
+      "kana": "サトウ ケンタ",
+      "phone": "090-8765-4321",
+      "email": "kenta.sato@example.com",
+      "birthday": "1985-07-22",
+      "gender": "male",
+      "address": "東京都新宿区西新宿2-4-5",
+      "memo": "短髪スタイル希望。月1回来店。q",
+      "createdAt": "2024-02-10T11:00:00.000Z",
+      "updatedAt": "2025-05-26T10:32:50.601Z",
+      "totalVisits": 0,
+      "lastVisit": "2025-01-18T14:00:00.000Z",
+      "totalSpent": 0,
+      "averageSpent": 0,
+      "preferences": {
+        "hairType": "太い髪",
+        "favoriteServices": [],
+        "allergyInfo": "なし",
+        "skinType": "普通"
+      },
+      "appointments": [
+        {
+          "id": "7",
+          "title": "カラー",
+          "start": "2025-05-26T01:00:00.000Z",
+          "end": "2025-05-26T02:30:00.000Z",
+          "clientId": "2",
+          "clientName": "佐藤 健太",
+          "phone": "090-8765-4321",
+          "services": [
+            {
+              "id": "2",
+              "name": "カラー",
+              "duration": 90,
+              "price": 8000
+            }
+          ],
+          "totalPrice": 8000,
+          "totalDuration": 90,
+          "note": "",
+          "status": "scheduled",
+          "createdAt": "2025-05-25T00:00:09.906Z",
+          "updatedAt": "2025-05-25T00:00:09.906Z"
+        },
+        {
+          "id": "2",
+          "title": "パーマ",
+          "start": "2025-05-12T14:00:00",
+          "end": "2025-05-12T16:00:00",
+          "clientId": "2",
+          "clientName": "鈴木 健太",
+          "phone": "090-8765-4321",
+          "services": [
+            {
+              "id": "3",
+              "name": "パーマ",
+              "duration": 120,
+              "price": 12000
+            }
+          ],
+          "totalPrice": 12000,
+          "totalDuration": 120,
+          "note": "前回よりも強めにかけてほしいとのこと",
+          "status": "scheduled",
+          "createdAt": "2025-01-15T10:00:00",
+          "updatedAt": "2025-01-15T10:00:00"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "name": "鈴木 めぐみ",
+      "kana": "スズキ メグミ",
+      "phone": "090-2468-1357",
+      "email": "megumi.suzuki@example.com",
+      "birthday": "1992-11-08",
+      "gender": "female",
+      "address": "東京都港区六本木3-7-9",
+      "memo": "ロングヘア。トリートメント重視。",
+      "createdAt": "2024-03-05T09:30:00.000Z",
+      "updatedAt": "2025-01-10T12:15:00.000Z",
+      "totalVisits": 8,
+      "lastVisit": "2025-01-10T11:00:00.000Z",
+      "totalSpent": 96000,
+      "averageSpent": 12000,
+      "preferences": {
+        "hairType": "普通",
+        "favoriteServices": [
+          "トリートメント",
+          "ヘッドスパ"
+        ],
+        "allergyInfo": "なし",
+        "skinType": "乾燥肌"
+      }
+    },
+    {
+      "id": "4",
+      "name": "伊藤 陽子",
+      "kana": "イトウ ヨウコ",
+      "phone": "090-1357-2468",
+      "email": "yoko.ito@example.com",
+      "birthday": "1988-05-30",
+      "gender": "female",
+      "address": "東京都品川区品川1-5-8",
+      "memo": "ショートヘア。明るい色は避けたい。",
+      "createdAt": "2024-04-12T14:20:00.000Z",
+      "updatedAt": "2024-12-25T10:30:00.000Z",
+      "totalVisits": 6,
+      "lastVisit": "2024-12-25T15:30:00.000Z",
+      "totalSpent": 45000,
+      "averageSpent": 7500,
+      "preferences": {
+        "hairType": "くせ毛",
+        "favoriteServices": [
+          "カット"
+        ],
+        "allergyInfo": "化学薬品に軽度のアレルギー",
+        "skinType": "敏感肌"
+      }
+    },
+    {
+      "id": "5",
+      "name": "渡辺 大輔",
+      "kana": "ワタナベ ダイスケ",
+      "phone": "090-3698-7412",
+      "email": "daisuke.watanabe@example.com",
+      "birthday": "1993-12-03",
+      "gender": "male",
+      "address": "東京都中央区銀座4-6-12",
+      "memo": "ビジネスマン。清潔感重視。",
+      "createdAt": "2024-05-20T16:45:00.000Z",
+      "updatedAt": "2025-01-15T13:20:00.000Z",
+      "totalVisits": 10,
+      "lastVisit": "2025-01-15T13:00:00.000Z",
+      "totalSpent": 80000,
+      "averageSpent": 8000,
+      "preferences": {
+        "hairType": "普通",
+        "favoriteServices": [
+          "カット",
+          "トリートメント"
+        ],
+        "allergyInfo": "なし",
+        "skinType": "普通"
+      }
+    },
+    {
+      "id": "6",
+      "name": "高橋 美咲",
+      "kana": "タカハシ ミサキ",
+      "phone": "090-7531-9642",
+      "email": "misaki.takahashi@example.com",
+      "birthday": "1995-08-17",
+      "gender": "female",
+      "address": "東京都世田谷区三軒茶屋2-3-4",
+      "memo": "学生。カジュアルなスタイル希望。",
+      "createdAt": "2024-06-18T11:15:00.000Z",
+      "updatedAt": "2024-11-30T15:45:00.000Z",
+      "totalVisits": 4,
+      "lastVisit": "2024-11-30T13:00:00.000Z",
+      "totalSpent": 28000,
+      "averageSpent": 7000,
+      "preferences": {
+        "hairType": "細い髪",
+        "favoriteServices": [
+          "カット",
+          "カラー"
+        ],
+        "allergyInfo": "なし",
+        "skinType": "普通"
+      }
+    },
+    {
+      "id": "7",
+      "name": "小林 雄一",
+      "kana": "コバヤシ ユウイチ",
+      "phone": "090-8642-3157",
+      "email": "yuichi.kobayashi@example.com",
+      "birthday": "1980-01-25",
+      "gender": "male",
+      "address": "東京都練馬区練馬1-8-6",
+      "memo": "薄毛が気になる。ボリュームアップ希望。",
+      "createdAt": "2024-07-22T09:00:00.000Z",
+      "updatedAt": "2024-12-15T11:30:00.000Z",
+      "totalVisits": 7,
+      "lastVisit": "2024-12-15T10:00:00.000Z",
+      "totalSpent": 63000,
+      "averageSpent": 9000,
+      "preferences": {
+        "hairType": "薄毛",
+        "favoriteServices": [
+          "カット",
+          "ヘッドスパ"
+        ],
+        "allergyInfo": "なし",
+        "skinType": "脂性肌"
+      }
+    },
+    {
+      "id": "8",
+      "name": "松本 千春",
+      "kana": "マツモト チハル",
+      "phone": "090-5284-7193",
+      "email": "chiharu.matsumoto@example.com",
+      "birthday": "1987-09-12",
+      "gender": "female",
+      "address": "東京都杉並区阿佐ヶ谷3-5-7",
+      "memo": "妊娠中。カラーやパーマは控えている。",
+      "createdAt": "2024-08-30T13:40:00.000Z",
+      "updatedAt": "2025-01-05T16:20:00.000Z",
+      "totalVisits": 3,
+      "lastVisit": "2025-01-05T14:00:00.000Z",
+      "totalSpent": 21000,
+      "averageSpent": 7000,
+      "preferences": {
+        "hairType": "普通",
+        "favoriteServices": [
+          "カット",
+          "シャンプー・ブロー"
+        ],
+        "allergyInfo": "妊娠中のため化学薬品使用不可",
+        "skinType": "敏感肌"
+      }
+    }
+  ]
+}

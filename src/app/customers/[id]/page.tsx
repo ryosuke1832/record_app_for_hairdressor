@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { format, parseISO, differenceInYears, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInYears, isBefore, startOfDay } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import Navigation from '@/components/Navigation';
 import AppointmentStatusBadge from '@/components/AppointmentStatusBadge';
@@ -65,7 +65,8 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'appointments' | 'preferences'>('info');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // 顧客データを取得
   useEffect(() => {
@@ -115,28 +116,46 @@ export default function CustomerDetailPage() {
       case 'male': return '男性';
       case 'female': return '女性';
       case 'other': return 'その他';
-      default: return '未設定';
+      default: return '-';
     }
   };
 
-  // 最終来店からの日数計算
-  const getDaysSinceLastVisit = (lastVisit?: string) => {
-    if (!lastVisit) return null;
+  // 最終来店日の表示
+  const getLastVisitDisplay = (lastVisit?: string) => {
+    if (!lastVisit) return '未来店';
     try {
-      return differenceInDays(new Date(), parseISO(lastVisit));
+      return format(parseISO(lastVisit), 'yyyy年M月d日(E)', { locale: ja });
     } catch {
-      return null;
+      return '不明';
     }
   };
 
-  // 予約詳細ページへ移動
-  const handleAppointmentClick = (appointmentId: string) => {
-    router.push(`/appointments/${appointmentId}`);
-  };
+  // 顧客削除
+  const handleDeleteCustomer = async () => {
+    if (!customer) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      const response = await fetch(`/api/customers/${customer.id}`, {
+        method: 'DELETE',
+      });
 
-  // 新規予約ページへ移動（顧客指定）
-  const handleNewAppointment = () => {
-    router.push(`/appointments/new?customerId=${params.id}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '顧客の削除に失敗しました');
+      }
+
+      alert('顧客を削除しました');
+      router.push('/customers');
+      
+    } catch (err) {
+      console.error('顧客削除エラー:', err);
+      alert(err instanceof Error ? err.message : '顧客の削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   // 編集ページへ移動
@@ -144,310 +163,24 @@ export default function CustomerDetailPage() {
     router.push(`/customers/${params.id}/edit`);
   };
 
-  // 統計情報の計算
-  const getStatistics = () => {
-    if (!customer?.appointments) return null;
-
-    const completedAppointments = customer.appointments.filter(a => a.status === 'completed');
-    const scheduledAppointments = customer.appointments.filter(a => a.status === 'scheduled');
-    const cancelledAppointments = customer.appointments.filter(a => a.status === 'cancelled');
-
-    // 月別来店回数（過去12ヶ月）
-    const monthlyVisits: { [key: string]: number } = {};
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = format(date, 'yyyy-MM');
-      monthlyVisits[key] = 0;
-    }
-
-    completedAppointments.forEach(appointment => {
-      const appointmentDate = parseISO(appointment.start);
-      const key = format(appointmentDate, 'yyyy-MM');
-      if (monthlyVisits.hasOwnProperty(key)) {
-        monthlyVisits[key]++;
-      }
-    });
-
-    return {
-      completed: completedAppointments.length,
-      scheduled: scheduledAppointments.length,
-      cancelled: cancelledAppointments.length,
-      monthlyVisits
-    };
+  // 新規予約作成（顧客情報を事前選択）
+  const handleNewAppointment = () => {
+    router.push(`/appointments/new?customerId=${params.id}&customerName=${encodeURIComponent(customer?.name || '')}`);
   };
 
-  const statistics = getStatistics();
-
-  // タブコンテンツの表示
-  const renderTabContent = () => {
-    if (!customer) return null;
-
-    switch (activeTab) {
-      case 'info':
-        return (
-          <div className="space-y-6">
-            {/* 基本情報 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">👤 基本情報</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">お名前</label>
-                    <div className="text-lg font-medium">{customer.name}</div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">ふりがな</label>
-                    <div className="text-gray-700">{customer.kana || '未設定'}</div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">電話番号</label>
-                    <div className="text-gray-700">{customer.phone}</div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">メールアドレス</label>
-                    <div className="text-gray-700">{customer.email || '未設定'}</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">生年月日</label>
-                    <div className="text-gray-700">
-                      {customer.birthday ? (
-                        <>
-                          {format(parseISO(customer.birthday), 'yyyy年M月d日', { locale: ja })}
-                          {calculateAge(customer.birthday) && (
-                            <span className="ml-2 text-blue-600">
-                              ({calculateAge(customer.birthday)}歳)
-                            </span>
-                          )}
-                        </>
-                      ) : '未設定'}
-                    </div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">性別</label>
-                    <div className="text-gray-700">{getGenderDisplay(customer.gender)}</div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">住所</label>
-                    <div className="text-gray-700">{customer.address || '未設定'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 来店統計 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">📊 来店統計</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{customer.totalVisits}</div>
-                  <div className="text-sm text-gray-600">総来店回数</div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    ¥{customer.totalSpent.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-600">累計金額</div>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    ¥{customer.averageSpent.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-600">平均単価</div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {customer.lastVisit ? (
-                      <>
-                        {getDaysSinceLastVisit(customer.lastVisit)}
-                        <span className="text-sm">日前</span>
-                      </>
-                    ) : (
-                      '未来店'
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">最終来店</div>
-                </div>
-              </div>
-            </div>
-
-            {/* メモ */}
-            {customer.memo && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">📝 メモ</h3>
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <p className="text-gray-700 whitespace-pre-wrap">{customer.memo}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'appointments':
-        return (
-          <div className="space-y-4">
-            {customer.appointments && customer.appointments.length > 0 ? (
-              customer.appointments.map((appointment) => (
-                <div 
-                  key={appointment.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleAppointmentClick(appointment.id)}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-gray-900">
-                        {appointment.title}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {format(parseISO(appointment.start), 'yyyy年M月d日(E) HH:mm', { locale: ja })}
-                        〜{format(parseISO(appointment.end), 'HH:mm')}
-                      </p>
-                    </div>
-                    <AppointmentStatusBadge status={appointment.status} />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                    <div className="text-sm">
-                      <div className="text-gray-500">💰 料金</div>
-                      <div className="font-medium">{appointment.totalPrice.toLocaleString()}円</div>
-                    </div>
-                    <div className="text-sm">
-                      <div className="text-gray-500">⏱️ 所要時間</div>
-                      <div className="font-medium">{appointment.totalDuration}分</div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm">
-                    <div className="text-gray-500 mb-1">📋 施術内容</div>
-                    <div className="flex flex-wrap gap-1">
-                      {appointment.services.map((service) => (
-                        <span 
-                          key={service.id}
-                          className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
-                        >
-                          {service.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {appointment.note && (
-                    <div className="mt-3 text-sm">
-                      <div className="text-gray-500">📝 備考</div>
-                      <div className="text-gray-700 text-xs">
-                        {appointment.note}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-400 mb-4 text-6xl">📅</div>
-                <p className="text-gray-500 mb-4">予約履歴がありません</p>
-                <button
-                  onClick={handleNewAppointment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                >
-                  新規予約を作成
-                </button>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'preferences':
-        return (
-          <div className="space-y-6">
-            {/* 美容関連情報 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">💇‍♀️ 美容関連情報</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">髪質</label>
-                    <div className="text-gray-700">
-                      {customer.preferences?.hairType || '未設定'}
-                    </div>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">肌質</label>
-                    <div className="text-gray-700">
-                      {customer.preferences?.skinType || '未設定'}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-500 mb-1">よく利用するサービス</label>
-                    <div>
-                      {customer.preferences?.favoriteServices && customer.preferences.favoriteServices.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {customer.preferences.favoriteServices.map((service, index) => (
-                            <span 
-                              key={index}
-                              className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
-                            >
-                              {service}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">未設定</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* アレルギー情報 */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">⚠️ アレルギー・注意事項</h3>
-              <div className={`p-4 rounded-md ${
-                customer.preferences?.allergyInfo && customer.preferences.allergyInfo !== 'なし'
-                  ? 'bg-red-50 border border-red-200'
-                  : 'bg-gray-50'
-              }`}>
-                <div className={`${
-                  customer.preferences?.allergyInfo && customer.preferences.allergyInfo !== 'なし'
-                    ? 'text-red-700 font-medium'
-                    : 'text-gray-700'
-                }`}>
-                  {customer.preferences?.allergyInfo || '未設定'}
-                </div>
-              </div>
-            </div>
-
-            {/* 統計情報 */}
-            {statistics && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">📈 予約統計</h3>
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-xl font-bold text-green-600">{statistics.completed}</div>
-                    <div className="text-sm text-gray-600">完了</div>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-xl font-bold text-blue-600">{statistics.scheduled}</div>
-                    <div className="text-sm text-gray-600">予約中</div>
-                  </div>
-                  <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <div className="text-xl font-bold text-red-600">{statistics.cancelled}</div>
-                    <div className="text-sm text-gray-600">キャンセル</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
-    }
+  // 予約詳細ページへ移動
+  const handleAppointmentClick = (appointmentId: string) => {
+    router.push(`/appointments/${appointmentId}`);
   };
+
+  // 今日以降と過去の予約を分ける
+  const today = startOfDay(new Date());
+  const futureAppointments = customer?.appointments?.filter(
+    appointment => !isBefore(parseISO(appointment.start), today)
+  ) || [];
+  const pastAppointments = customer?.appointments?.filter(
+    appointment => isBefore(parseISO(appointment.start), today)
+  ) || [];
 
   return (
     <>
@@ -499,82 +232,345 @@ export default function CustomerDetailPage() {
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleNewAppointment}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm flex-1 sm:flex-none"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm flex-1 sm:flex-none"
                   >
                     予約作成
                   </button>
                   <button
                     onClick={handleEditCustomer}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm flex-1 sm:flex-none"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm flex-1 sm:flex-none"
                   >
                     編集
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm flex-1 sm:flex-none"
+                    disabled={isDeleting}
+                  >
+                    削除
                   </button>
                 </div>
               </div>
 
-              {/* 顧客名ヘッダー */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {customer.name}
-                    </h1>
-                    <p className="text-gray-600 text-lg">{customer.kana}</p>
-                    <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-600">
-                      <span>📞 {customer.phone}</span>
-                      {customer.email && <span>✉️ {customer.email}</span>}
-                      {customer.lastVisit && (
-                        <span>
-                          📅 最終来店: {format(parseISO(customer.lastVisit), 'yyyy/MM/dd', { locale: ja })}
-                        </span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 顧客基本情報 */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 className="text-xl font-bold mb-4">👤 基本情報</h2>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-sm text-gray-500">お名前</div>
+                        <div className="text-lg font-medium">{customer.name}</div>
+                        <div className="text-sm text-gray-500">{customer.kana}</div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-sm text-gray-500">電話番号</div>
+                        <div className="font-medium">{customer.phone}</div>
+                      </div>
+                      
+                      {customer.email && (
+                        <div>
+                          <div className="text-sm text-gray-500">メールアドレス</div>
+                          <div className="font-medium">{customer.email}</div>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <div className="text-sm text-gray-500">性別・年齢</div>
+                        <div className="font-medium">
+                          {getGenderDisplay(customer.gender)}
+                          {calculateAge(customer.birthday) && ` (${calculateAge(customer.birthday)}歳)`}
+                        </div>
+                        {customer.birthday && (
+                          <div className="text-sm text-gray-500">
+                            {format(parseISO(customer.birthday), 'yyyy年M月d日', { locale: ja })}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {customer.address && (
+                        <div>
+                          <div className="text-sm text-gray-500">住所</div>
+                          <div className="font-medium">{customer.address}</div>
+                        </div>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500">顧客ID</div>
-                    <div className="font-mono text-gray-700">#{customer.id}</div>
+
+                  {/* 来店統計 */}
+                  <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h3 className="text-lg font-semibold mb-4">📊 来店統計</h3>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{customer.totalVisits}</div>
+                        <div className="text-sm text-gray-500">来店回数</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {customer.totalSpent.toLocaleString()}円
+                        </div>
+                        <div className="text-sm text-gray-500">累計金額</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">平均単価:</span>
+                        <span className="font-medium">{customer.averageSpent.toLocaleString()}円</span>
+                      </div>
+                      <div className="flex justify-between mt-2">
+                        <span className="text-sm text-gray-500">最終来店:</span>
+                        <span className="font-medium">{getLastVisitDisplay(customer.lastVisit)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 顧客メモ・設定 */}
+                  {(customer.memo || customer.preferences) && (
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                      <h3 className="text-lg font-semibold mb-4">📝 メモ・設定</h3>
+                      
+                      {customer.memo && (
+                        <div className="mb-4">
+                          <div className="text-sm text-gray-500 mb-1">メモ</div>
+                          <div className="text-gray-700 whitespace-pre-wrap">{customer.memo}</div>
+                        </div>
+                      )}
+                      
+                      {customer.preferences && (
+                        <div className="space-y-3">
+                          {customer.preferences.hairType && (
+                            <div>
+                              <span className="text-sm text-gray-500">髪質: </span>
+                              <span className="font-medium">{customer.preferences.hairType}</span>
+                            </div>
+                          )}
+                          
+                          {customer.preferences.skinType && (
+                            <div>
+                              <span className="text-sm text-gray-500">肌質: </span>
+                              <span className="font-medium">{customer.preferences.skinType}</span>
+                            </div>
+                          )}
+                          
+                          {customer.preferences.allergyInfo && customer.preferences.allergyInfo !== 'なし' && (
+                            <div>
+                              <span className="text-sm text-gray-500">アレルギー: </span>
+                              <span className="font-medium text-red-600">{customer.preferences.allergyInfo}</span>
+                            </div>
+                          )}
+                          
+                          {customer.preferences.favoriteServices && customer.preferences.favoriteServices.length > 0 && (
+                            <div>
+                              <div className="text-sm text-gray-500 mb-1">よく利用するサービス</div>
+                              <div className="flex flex-wrap gap-1">
+                                {customer.preferences.favoriteServices.map((service, index) => (
+                                  <span 
+                                    key={index}
+                                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+                                  >
+                                    {service}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 予約履歴 */}
+                <div className="lg:col-span-2">
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold">📅 予約履歴</h2>
+                      <button
+                        onClick={handleNewAppointment}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                      >
+                        新規予約
+                      </button>
+                    </div>
+
+                    {(!customer.appointments || customer.appointments.length === 0) ? (
+                      <div className="text-center py-8">
+                        <div className="text-gray-400 mb-2 text-4xl">📝</div>
+                        <p className="text-gray-500 mb-4">予約履歴がありません</p>
+                        <button
+                          onClick={handleNewAppointment}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                        >
+                          初回予約を作成
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* 今後の予約 */}
+                        {futureAppointments.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-gray-900 mb-3">
+                              今後の予約 ({futureAppointments.length}件)
+                            </h3>
+                            <div className="space-y-3">
+                              {futureAppointments.map(appointment => (
+                                <AppointmentCard 
+                                  key={appointment.id} 
+                                  appointment={appointment} 
+                                  onClick={() => handleAppointmentClick(appointment.id)}
+                                  isPast={false}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 過去の予約 */}
+                        {pastAppointments.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-gray-600 mb-3">
+                              過去の予約 ({pastAppointments.length}件)
+                            </h3>
+                            <div className="space-y-3">
+                              {pastAppointments.slice(0, 10).map(appointment => (
+                                <AppointmentCard 
+                                  key={appointment.id} 
+                                  appointment={appointment} 
+                                  onClick={() => handleAppointmentClick(appointment.id)}
+                                  isPast={true}
+                                />
+                              ))}
+                              {pastAppointments.length > 10 && (
+                                <div className="text-center py-2">
+                                  <p className="text-sm text-gray-500">
+                                    他 {pastAppointments.length - 10} 件の予約履歴があります
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* タブナビゲーション */}
-              <div className="bg-white rounded-lg shadow-sm mb-6">
-                <div className="border-b border-gray-200">
-                  <nav className="flex">
-                    {[
-                      { key: 'info', label: '基本情報', icon: '👤' },
-                      { key: 'appointments', label: '予約履歴', icon: '📅' },
-                      { key: 'preferences', label: '設定・統計', icon: '⚙️' }
-                    ].map((tab) => (
-                      <button
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                        className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                          activeTab === tab.key
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <span className="mr-2">{tab.icon}</span>
-                        {tab.label}
-                        {tab.key === 'appointments' && customer.appointments && (
-                          <span className="ml-2 bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs">
-                            {customer.appointments.length}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-              </div>
-
-              {/* タブコンテンツ */}
-              {renderTabContent()}
             </div>
           )}
         </div>
       </main>
+
+      {/* 削除確認ダイアログ */}
+      {showDeleteConfirm && customer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4 text-red-600">⚠️ 顧客削除の確認</h3>
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                <strong>{customer.name}</strong> さんを削除しますか？
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <p className="text-sm text-red-700">
+                  <strong>注意:</strong> この操作は取り消せません。顧客の情報と関連する予約履歴がすべて削除されます。
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                disabled={isDeleting}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleDeleteCustomer}
+                className={`px-4 py-2 text-white rounded-md ${
+                  isDeleting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+                disabled={isDeleting}
+              >
+                {isDeleting ? '削除中...' : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
+
+// 予約カードコンポーネント
+const AppointmentCard = ({ 
+  appointment, 
+  onClick, 
+  isPast = false 
+}: { 
+  appointment: Appointment, 
+  onClick: () => void,
+  isPast?: boolean 
+}) => {
+  const appointmentDate = parseISO(appointment.start);
+  const appointmentEnd = parseISO(appointment.end);
+  
+  return (
+    <div 
+      className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+        isPast 
+          ? 'bg-gray-50 border-gray-200 opacity-75' 
+          : 'bg-white border-gray-300 hover:border-blue-300'
+      }`}
+      onClick={onClick}
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1">
+          <h4 className={`font-medium ${isPast ? 'text-gray-600' : 'text-gray-900'}`}>
+            {appointment.title}
+          </h4>
+          <div className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
+            {format(appointmentDate, 'yyyy年M月d日(E) HH:mm', { locale: ja })} 
+            - {format(appointmentEnd, 'HH:mm')}
+          </div>
+        </div>
+        <AppointmentStatusBadge 
+          status={appointment.status} 
+          className={isPast ? 'opacity-75' : ''}
+        />
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <div className={`text-sm ${isPast ? 'text-gray-500' : 'text-gray-600'}`}>
+          <div className="flex flex-wrap gap-1">
+            {appointment.services.map((service, index) => (
+              <span 
+                key={service.id}
+                className={`px-2 py-1 rounded text-xs ${
+                  isPast 
+                    ? 'bg-gray-200 text-gray-600' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}
+              >
+                {service.name}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className={`text-sm font-medium ${isPast ? 'text-gray-500' : 'text-gray-700'}`}>
+          {appointment.totalPrice.toLocaleString()}円
+        </div>
+      </div>
+      
+      {appointment.note && (
+        <div className={`mt-2 text-xs ${isPast ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className="truncate">{appointment.note}</div>
+        </div>
+      )}
+    </div>
+  );
+};

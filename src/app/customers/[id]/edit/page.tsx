@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { format, parseISO } from 'date-fns';
 import Navigation from '@/components/Navigation';
 
 // 顧客データの型定義
@@ -31,7 +30,7 @@ type Customer = {
   };
 };
 
-export default function CustomerEditPage() {
+export default function EditCustomerPage() {
   const params = useParams();
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -39,7 +38,7 @@ export default function CustomerEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // フォームの状態
+  // フォームデータの状態
   const [formData, setFormData] = useState({
     name: '',
     kana: '',
@@ -50,8 +49,8 @@ export default function CustomerEditPage() {
     address: '',
     memo: '',
     hairType: '',
-    skinType: '',
     allergyInfo: '',
+    skinType: ''
   });
 
   // 顧客データを取得
@@ -80,13 +79,13 @@ export default function CustomerEditPage() {
           kana: data.kana || '',
           phone: data.phone || '',
           email: data.email || '',
-          birthday: data.birthday ? format(parseISO(data.birthday), 'yyyy-MM-dd') : '',
+          birthday: data.birthday || '',
           gender: data.gender || '',
           address: data.address || '',
           memo: data.memo || '',
           hairType: data.preferences?.hairType || '',
-          skinType: data.preferences?.skinType || '',
           allergyInfo: data.preferences?.allergyInfo || '',
+          skinType: data.preferences?.skinType || ''
         });
         
       } catch (err) {
@@ -105,10 +104,7 @@ export default function CustomerEditPage() {
   // フォーム入力の変更ハンドラ
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   // フォーム送信ハンドラ
@@ -117,31 +113,24 @@ export default function CustomerEditPage() {
     
     if (!customer || saving) return;
     
-    // バリデーション
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      alert('名前と電話番号は必須項目です');
-      return;
-    }
-    
     setSaving(true);
 
     try {
-      // 更新された顧客データを作成
-      const updatedCustomer = {
-        ...customer,
+      // 更新データを作成
+      const updateData = {
         name: formData.name.trim(),
         kana: formData.kana.trim(),
         phone: formData.phone.trim(),
-        email: formData.email.trim() || undefined,
+        email: formData.email.trim(),
         birthday: formData.birthday || undefined,
         gender: formData.gender || undefined,
-        address: formData.address.trim() || undefined,
-        memo: formData.memo.trim() || undefined,
+        address: formData.address.trim(),
+        memo: formData.memo.trim(),
         preferences: {
           ...customer.preferences,
           hairType: formData.hairType.trim() || undefined,
-          skinType: formData.skinType.trim() || undefined,
-          allergyInfo: formData.allergyInfo.trim() || undefined,
+          allergyInfo: formData.allergyInfo.trim() || 'なし',
+          skinType: formData.skinType.trim() || undefined
         }
       };
       
@@ -151,43 +140,38 @@ export default function CustomerEditPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedCustomer),
+        body: JSON.stringify(updateData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '顧客の更新に失敗しました');
+        const error = await response.json();
+        throw new Error(error.error || '顧客情報の更新に失敗しました');
       }
 
       // 成功メッセージを表示
-      alert('顧客情報が更新されました');
+      alert('顧客情報を更新しました');
       
       // 詳細ページに戻る
       router.push(`/customers/${customer.id}`);
       
     } catch (err) {
       console.error('顧客更新エラー:', err);
-      alert(err instanceof Error ? err.message : '顧客の更新に失敗しました');
+      alert(err instanceof Error ? err.message : '顧客情報の更新に失敗しました');
     } finally {
       setSaving(false);
     }
-  };
-
-  // キャンセル処理
-  const handleCancel = () => {
-    router.push(`/customers/${params.id}`);
   };
 
   return (
     <>
       <Navigation />
       <main className="min-h-screen bg-background pt-4 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           {/* ヘッダー */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-3">
               <button
-                onClick={handleCancel}
+                onClick={() => router.push(`/customers/${params.id}`)}
                 className="text-blue-600 hover:text-blue-800"
                 disabled={saving}
               >
@@ -210,7 +194,7 @@ export default function CustomerEditPage() {
               <p>{error}</p>
               <div className="mt-4 flex gap-2">
                 <button 
-                  onClick={handleCancel}
+                  onClick={() => router.push(`/customers/${params.id}`)}
                   className="text-sm underline"
                 >
                   顧客詳細に戻る
@@ -240,8 +224,9 @@ export default function CustomerEditPage() {
               <form onSubmit={handleSubmit} className="p-6">
                 {/* 基本情報 */}
                 <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4">👤 基本情報</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">👤 基本情報</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         お名前 <span className="text-red-500">*</span>
@@ -256,6 +241,7 @@ export default function CustomerEditPage() {
                         disabled={saving}
                       />
                     </div>
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         ふりがな
@@ -269,6 +255,9 @@ export default function CustomerEditPage() {
                         disabled={saving}
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         電話番号 <span className="text-red-500">*</span>
@@ -283,6 +272,7 @@ export default function CustomerEditPage() {
                         disabled={saving}
                       />
                     </div>
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         メールアドレス
@@ -296,6 +286,9 @@ export default function CustomerEditPage() {
                         disabled={saving}
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         生年月日
@@ -309,6 +302,7 @@ export default function CustomerEditPage() {
                         disabled={saving}
                       />
                     </div>
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         性別
@@ -327,8 +321,8 @@ export default function CustomerEditPage() {
                       </select>
                     </div>
                   </div>
-                  
-                  <div className="mt-6">
+
+                  <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       住所
                     </label>
@@ -343,10 +337,11 @@ export default function CustomerEditPage() {
                   </div>
                 </div>
 
-                {/* 美容関連情報 */}
+                {/* 髪質・肌質情報 */}
                 <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4">💇‍♀️ 美容関連情報</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">💡 髪質・肌質情報</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         髪質
@@ -360,12 +355,15 @@ export default function CustomerEditPage() {
                       >
                         <option value="">選択してください</option>
                         <option value="細い髪">細い髪</option>
-                        <option value="太い髪">太い髪</option>
                         <option value="普通">普通</option>
+                        <option value="太い髪">太い髪</option>
                         <option value="くせ毛">くせ毛</option>
                         <option value="薄毛">薄毛</option>
+                        <option value="硬い髪">硬い髪</option>
+                        <option value="柔らかい髪">柔らかい髪</option>
                       </select>
                     </div>
+                    
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         肌質
@@ -382,21 +380,22 @@ export default function CustomerEditPage() {
                         <option value="敏感肌">敏感肌</option>
                         <option value="乾燥肌">乾燥肌</option>
                         <option value="脂性肌">脂性肌</option>
+                        <option value="混合肌">混合肌</option>
                       </select>
                     </div>
                   </div>
-                  
-                  <div className="mt-6">
+
+                  <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      アレルギー・注意事項
+                      アレルギー情報
                     </label>
-                    <textarea
+                    <input
+                      type="text"
                       name="allergyInfo"
                       value={formData.allergyInfo}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={3}
-                      placeholder="アレルギー情報や注意事項があれば記入してください"
+                      placeholder="例: 化学薬品に軽度のアレルギー、なし"
                       disabled={saving}
                     />
                   </div>
@@ -404,23 +403,23 @@ export default function CustomerEditPage() {
 
                 {/* メモ */}
                 <div className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4">📝 メモ</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">📝 メモ</h3>
                   <textarea
                     name="memo"
                     value={formData.memo}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={4}
-                    placeholder="顧客に関するメモや特記事項があれば記入してください"
+                    placeholder="顧客に関する特記事項やメモを入力してください"
                     disabled={saving}
-                  />
+                  ></textarea>
                 </div>
 
                 {/* 送信ボタン */}
-                <div className="flex justify-end space-x-3 border-t pt-6">
+                <div className="flex justify-end space-x-3 border-t pt-4">
                   <button
                     type="button"
-                    onClick={handleCancel}
+                    onClick={() => router.push(`/customers/${params.id}`)}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
                     disabled={saving}
                   >
@@ -429,7 +428,7 @@ export default function CustomerEditPage() {
                   <button
                     type="submit"
                     className={`px-4 py-2 text-white rounded-md ${
-                      saving
+                      saving 
                         ? 'bg-gray-400 cursor-not-allowed' 
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
