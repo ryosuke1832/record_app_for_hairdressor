@@ -10,6 +10,9 @@ type Service = {
   name: string;
   duration: number;
   price: number;
+  category: string;
+  description?: string;
+  isActive: boolean;
 };
 
 type Appointment = {
@@ -33,16 +36,6 @@ type AppointmentEditProps = {
   onCancel: () => void;
 };
 
-// 利用可能なサービス一覧（実際のアプリではAPIから取得します）
-const AVAILABLE_SERVICES = [
-  { id: '1', name: 'カット', duration: 40, price: 4500 },
-  { id: '2', name: 'カラー', duration: 90, price: 8000 },
-  { id: '3', name: 'パーマ', duration: 120, price: 12000 },
-  { id: '4', name: 'トリートメント', duration: 30, price: 3000 },
-  { id: '5', name: 'ヘッドスパ', duration: 40, price: 5000 },
-  { id: '6', name: 'シャンプー・ブロー', duration: 20, price: 2000 },
-];
-
 // 予約可能時間枠（営業時間）
 const BUSINESS_HOURS = {
   start: 9, // 9:00
@@ -57,6 +50,11 @@ export default function AppointmentEdit({
   onSave, 
   onCancel 
 }: AppointmentEditProps) {
+  // サービス一覧を状態として管理
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+
   // フォームの状態
   const [formData, setFormData] = useState({
     date: format(parseISO(appointment.start), 'yyyy-MM-dd'),
@@ -69,9 +67,34 @@ export default function AppointmentEdit({
   const [totalPrice, setTotalPrice] = useState(appointment.totalPrice);
   const [totalDuration, setTotalDuration] = useState(appointment.totalDuration);
 
+  // サービスデータを取得
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        setLoadingServices(true);
+        setServiceError(null);
+        
+        const response = await fetch('/api/services?isActive=true');
+        if (!response.ok) {
+          throw new Error('サービスデータの取得に失敗しました');
+        }
+        
+        const data = await response.json();
+        setAvailableServices(data);
+      } catch (err) {
+        console.error('サービスデータ取得エラー:', err);
+        setServiceError(err instanceof Error ? err.message : 'サービスデータの取得に失敗しました');
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
   // サービス選択が変更されたときに合計を再計算
   useEffect(() => {
-    const selectedServices = AVAILABLE_SERVICES.filter(service => 
+    const selectedServices = availableServices.filter(service => 
       formData.selectedServiceIds.includes(service.id)
     );
     
@@ -80,7 +103,7 @@ export default function AppointmentEdit({
     
     setTotalPrice(price);
     setTotalDuration(duration);
-  }, [formData.selectedServiceIds]);
+  }, [formData.selectedServiceIds, availableServices]);
 
   // サービス選択の変更ハンドラ
   const handleServiceChange = (serviceId: string) => {
@@ -112,7 +135,7 @@ export default function AppointmentEdit({
     e.preventDefault();
     
     // 選択されたサービスを取得
-    const selectedServices = AVAILABLE_SERVICES.filter(service => 
+    const selectedServices = availableServices.filter(service => 
       formData.selectedServiceIds.includes(service.id)
     );
     
@@ -197,6 +220,42 @@ export default function AppointmentEdit({
     }
   };
 
+  // ローディング中の表示
+  if (loadingServices) {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 bg-blue-50 border-b">
+          <h2 className="text-xl font-semibold">予約を編集</h2>
+        </div>
+        <div className="p-6 flex justify-center items-center h-64">
+          <p className="text-gray-500">サービス情報を読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー表示
+  if (serviceError) {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 bg-blue-50 border-b">
+          <h2 className="text-xl font-semibold">予約を編集</h2>
+        </div>
+        <div className="p-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+            <p>{serviceError}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-2 text-sm underline"
+            >
+              再読み込み
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-4 bg-blue-50 border-b">
@@ -243,25 +302,34 @@ export default function AppointmentEdit({
         {/* サービス選択 */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-gray-500 mb-2">施術メニュー</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {AVAILABLE_SERVICES.map(service => (
-              <div 
-                key={service.id}
-                className={`border rounded-md p-3 cursor-pointer transition-colors ${
-                  formData.selectedServiceIds.includes(service.id) 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-200 hover:bg-gray-50'
-                }`}
-                onClick={() => handleServiceChange(service.id)}
-              >
-                <div className="flex justify-between">
-                  <span className="font-medium">{service.name}</span>
-                  <span className="text-gray-600">{service.price.toLocaleString()}円</span>
+          {availableServices.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              利用可能なサービスがありません
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {availableServices.map(service => (
+                <div 
+                  key={service.id}
+                  className={`border rounded-md p-3 cursor-pointer transition-colors ${
+                    formData.selectedServiceIds.includes(service.id) 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                  onClick={() => handleServiceChange(service.id)}
+                >
+                  <div className="flex justify-between">
+                    <span className="font-medium">{service.name}</span>
+                    <span className="text-gray-600">{service.price.toLocaleString()}円</span>
+                  </div>
+                  <div className="text-sm text-gray-500">所要時間: {service.duration}分</div>
+                  {service.category && (
+                    <div className="text-xs text-gray-400">{service.category}</div>
+                  )}
                 </div>
-                <div className="text-sm text-gray-500">所要時間: {service.duration}分</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 合計情報 */}
