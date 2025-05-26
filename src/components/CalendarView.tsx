@@ -7,12 +7,22 @@ import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// 時間設定（変数として定義）
-const START_HOUR = 8; // 開始時間（8時）
-const END_HOUR = 20;  // 終了時間（20時）
-
 // 曜日の表示用配列
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+// 設定データの型定義
+type CalendarSettings = {
+  timeRange: {
+    startHour: number;
+    endHour: number;
+  };
+  dayRange: {
+    startDay: number; // 0: 日曜日, 1: 月曜日, ..., 6: 土曜日
+    endDay: number;
+  };
+  timeSlotInterval: number; // 分単位（15, 30, 60）
+  showWeekends: boolean;
+};
 
 // 予約データの型定義
 type Service = {
@@ -39,6 +49,9 @@ type Appointment = {
   updatedAt: string;
 };
 
+// カレンダー設定パネルのコンポーネント（インポート用）
+import CalendarSettingsPanel from './CalendarSettingsPanel';
+
 export default function CalendarView() {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -49,18 +62,47 @@ export default function CalendarView() {
   const [selectedSlot, setSelectedSlot] = useState<{date: Date, hour: number} | null>(null);
   const [showLongPressIndicator, setShowLongPressIndicator] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // 週の日付を生成
+  // デフォルト設定
+  const [settings, setSettings] = useState<CalendarSettings>({
+    timeRange: { startHour: 8, endHour: 20 },
+    dayRange: { startDay: 0, endDay: 6 },
+    timeSlotInterval: 30,
+    showWeekends: true
+  });
+
+  // 設定をローカルストレージから読み込み
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('calendarSettings');
+    if (savedSettings) {
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error('設定の読み込みに失敗しました:', error);
+      }
+    }
+  }, []);
+
+  // 週の日付を生成（設定に応じて）
   useEffect(() => {
     const dates = [];
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // 日曜始まり
 
-    for (let i = 0; i < 7; i++) {
-      dates.push(addDays(weekStart, i));
+    if (settings.showWeekends) {
+      // カスタム範囲で表示
+      for (let i = settings.dayRange.startDay; i <= settings.dayRange.endDay; i++) {
+        dates.push(addDays(weekStart, i));
+      }
+    } else {
+      // 平日のみ表示
+      for (let i = 1; i <= 5; i++) { // 月曜日から金曜日
+        dates.push(addDays(weekStart, i));
+      }
     }
     
     setWeekDates(dates);
-  }, [currentDate]);
+  }, [currentDate, settings]);
 
   // 予約データをAPIから取得
   useEffect(() => {
@@ -102,13 +144,30 @@ export default function CalendarView() {
     setCurrentDate(new Date());
   };
 
-  // 時間枠を生成
+  // 時間枠を生成（設定に応じて）
   const getTimeSlots = () => {
     const slots = [];
-    for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
-      slots.push(hour);
+    const { startHour, endHour } = settings.timeRange;
+    const interval = settings.timeSlotInterval;
+    
+    for (let hour = startHour; hour <= endHour; hour++) {
+      if (interval === 60) {
+        slots.push(hour);
+      } else {
+        for (let minute = 0; minute < 60; minute += interval) {
+          if (hour === endHour && minute > 0) break; // 最終時間は00分のみ
+          slots.push(hour + minute / 60);
+        }
+      }
     }
     return slots;
+  };
+
+  // 時間表示のフォーマット
+  const formatTimeSlot = (timeSlot: number) => {
+    const hour = Math.floor(timeSlot);
+    const minute = Math.round((timeSlot - hour) * 60);
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
   };
 
   // 予約のステータスに応じた色を取得
@@ -126,31 +185,41 @@ export default function CalendarView() {
   };
 
   // 予約を表示する関数
-  const renderAppointment = (date: Date, hour: number) => {
+  const renderAppointment = (date: Date, timeSlot: number) => {
+    const hour = Math.floor(timeSlot);
+    const minute = Math.round((timeSlot - hour) * 60);
+    
     return appointments.filter(appointment => {
       const appointmentStart = parseISO(appointment.start);
       const appointmentHour = appointmentStart.getHours();
-      return isSameDay(appointmentStart, date) && appointmentHour === hour;
+      const appointmentMinute = appointmentStart.getMinutes();
+      
+      return isSameDay(appointmentStart, date) && 
+             appointmentHour === hour && 
+             appointmentMinute === minute;
     }).map(appointment => {
       const appointmentStart = parseISO(appointment.start);
       const appointmentEnd = parseISO(appointment.end);
+      const slotDuration = settings.timeSlotInterval;
+      const appointmentDuration = (appointmentEnd.getTime() - appointmentStart.getTime()) / (1000 * 60);
+      const heightInSlots = appointmentDuration / slotDuration;
       
       return (
         <div 
           key={appointment.id}
-          className={`${getAppointmentColor(appointment.status)} text-white rounded p-1 text-xs cursor-pointer hover:opacity-90`}
+          className={`${getAppointmentColor(appointment.status)} text-white rounded p-1 text-xs cursor-pointer hover:opacity-90 absolute w-full`}
           style={{
-            height: `${(appointmentEnd.getTime() - appointmentStart.getTime()) / (1000 * 60 * 30) * 24}px`,
-            marginTop: `${(appointmentStart.getMinutes() / 60) * 48}px`
+            height: `${heightInSlots * 100}%`,
+            zIndex: 10
           }}
           onClick={(e) => {
             e.stopPropagation();
             handleAppointmentClick(appointment.id);
           }}
         >
-          <div className="font-bold">{appointment.title}</div>
-          <div>{appointment.clientName}</div>
-          <div>
+          <div className="font-bold truncate">{appointment.title}</div>
+          <div className="truncate">{appointment.clientName}</div>
+          <div className="text-xs">
             {format(appointmentStart, 'HH:mm')} - {format(appointmentEnd, 'HH:mm')}
           </div>
         </div>
@@ -164,43 +233,46 @@ export default function CalendarView() {
   };
 
   // タイムスロットが予約済みかどうかをチェック
-  const isSlotBooked = (date: Date, hour: number) => {
+  const isSlotBooked = (date: Date, timeSlot: number) => {
+    const hour = Math.floor(timeSlot);
+    const minute = Math.round((timeSlot - hour) * 60);
+    
     return appointments.some(appointment => {
       const appointmentStart = parseISO(appointment.start);
       const appointmentEnd = parseISO(appointment.end);
-      const appointmentHour = appointmentStart.getHours();
-      const appointmentEndHour = appointmentEnd.getHours();
-      const appointmentEndMinutes = appointmentEnd.getMinutes();
       
-      const effectiveEndHour = appointmentEndMinutes === 0 ? appointmentEndHour - 1 : appointmentEndHour;
+      if (!isSameDay(appointmentStart, date)) return false;
       
-      return isSameDay(appointmentStart, date) && 
-             (hour >= appointmentHour && hour <= effectiveEndHour);
+      const slotTime = hour * 60 + minute;
+      const startTime = appointmentStart.getHours() * 60 + appointmentStart.getMinutes();
+      const endTime = appointmentEnd.getHours() * 60 + appointmentEnd.getMinutes();
+      
+      return slotTime >= startTime && slotTime < endTime;
     });
   };
 
   // 空きスロットをタップ/クリックした時の処理
-  const handleSlotClick = (date: Date, hour: number) => {
-    if (isSlotBooked(date, hour)) return;
+  const handleSlotClick = (date: Date, timeSlot: number) => {
+    if (isSlotBooked(date, timeSlot)) return;
 
     const formattedDate = format(date, 'yyyy-MM-dd');
-    const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
+    const formattedTime = formatTimeSlot(timeSlot);
     
     router.push(`/appointments/new?date=${formattedDate}&time=${formattedTime}`);
   };
 
   // タイムスロットを長押しした時の処理（モバイル対応）
-  const handleTouchStart = (date: Date, hour: number) => {
-    if (isSlotBooked(date, hour)) return;
+  const handleTouchStart = (date: Date, timeSlot: number) => {
+    if (isSlotBooked(date, timeSlot)) return;
 
-    setSelectedSlot({ date, hour });
+    setSelectedSlot({ date, hour: Math.floor(timeSlot) });
     
     const timer = setTimeout(() => {
       setShowLongPressIndicator(true);
       
       setTimeout(() => {
         const formattedDate = format(date, 'yyyy-MM-dd');
-        const formattedTime = `${hour.toString().padStart(2, '0')}:00`;
+        const formattedTime = formatTimeSlot(timeSlot);
         router.push(`/appointments/new?date=${formattedDate}&time=${formattedTime}`);
       }, 500);
     }, 600);
@@ -217,6 +289,12 @@ export default function CalendarView() {
     
     setSelectedSlot(null);
     setShowLongPressIndicator(false);
+  };
+
+  // 設定変更時の処理
+  const handleSettingsChange = (newSettings: CalendarSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('calendarSettings', JSON.stringify(newSettings));
   };
 
   // エラー表示
@@ -272,9 +350,30 @@ export default function CalendarView() {
               新規予約
             </button>
           </Link>
-          <button className="border border-gray-300 px-4 py-1 rounded text-sm flex-1 sm:flex-none">
+          <button 
+            onClick={() => setShowSettings(true)}
+            className="border border-gray-300 px-4 py-1 rounded text-sm flex-1 sm:flex-none hover:bg-gray-50"
+          >
             表示設定
           </button>
+        </div>
+      </div>
+
+      {/* 設定情報表示 */}
+      <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+        <div className="flex flex-wrap gap-4">
+          <span>
+            ⏰ {formatTimeSlot(settings.timeRange.startHour)} - {formatTimeSlot(settings.timeRange.endHour)}
+          </span>
+          <span>
+            📅 {settings.showWeekends ? 
+              `${WEEKDAYS[settings.dayRange.startDay]} - ${WEEKDAYS[settings.dayRange.endDay]}` : 
+              '平日のみ'
+            }
+          </span>
+          <span>
+            🕐 {settings.timeSlotInterval}分間隔
+          </span>
         </div>
       </div>
 
@@ -289,7 +388,9 @@ export default function CalendarView() {
       {!loading && (
         <div className="overflow-x-auto border border-gray-300 rounded">
           {/* 曜日ヘッダー */}
-          <div className="grid grid-cols-8 border-b border-gray-300 bg-gray-100">
+          <div className="grid border-b border-gray-300 bg-gray-100" style={{
+            gridTemplateColumns: `60px repeat(${weekDates.length}, 1fr)`
+          }}>
             <div className="p-2 border-r border-gray-300"></div>
             {weekDates.map((date, index) => {
               const isToday = isSameDay(date, new Date());
@@ -315,59 +416,75 @@ export default function CalendarView() {
           </div>
 
           {/* 時間枠 */}
-          {getTimeSlots().map((hour, index) => (
-            <div 
-              key={index} 
-              className="grid grid-cols-8 border-b border-gray-300"
-            >
-              {/* 時間表示 */}
-              <div className="p-2 text-right text-xs text-gray-500 border-r border-gray-300">
-                {`${hour}:00`}
-              </div>
-              
-              {/* 各曜日の時間枠 */}
-              {weekDates.map((date, dateIndex) => {
-                const booked = isSlotBooked(date, hour);
-                const isSelected = selectedSlot && 
-                                  isSameDay(selectedSlot.date, date) && 
-                                  selectedSlot.hour === hour;
+          {getTimeSlots().map((timeSlot, index) => {
+            const isMainHour = timeSlot === Math.floor(timeSlot);
+            const slotHeight = settings.timeSlotInterval === 15 ? 'h-8' : 
+                              settings.timeSlotInterval === 30 ? 'h-12' : 'h-16';
+            
+            return (
+              <div 
+                key={index} 
+                className={`grid border-b border-gray-300 ${slotHeight}`}
+                style={{
+                  gridTemplateColumns: `60px repeat(${weekDates.length}, 1fr)`
+                }}
+              >
+                {/* 時間表示 */}
+                <div className={`p-1 text-right text-xs text-gray-500 border-r border-gray-300 flex items-center justify-end ${
+                  !isMainHour ? 'text-gray-400' : ''
+                }`}>
+                  {isMainHour || settings.timeSlotInterval >= 30 ? formatTimeSlot(timeSlot) : ''}
+                </div>
                 
-                return (
-                  <div 
-                    key={dateIndex} 
-                    className={`relative h-12 border-r border-gray-300 ${
-                      booked ? '' : 'cursor-pointer hover:bg-blue-50'
-                    } ${isSelected && showLongPressIndicator ? 'bg-blue-100' : ''}`}
-                    onClick={() => !booked && handleSlotClick(date, hour)}
-                    onTouchStart={() => handleTouchStart(date, hour)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={handleTouchEnd}
-                    onMouseDown={() => handleTouchStart(date, hour)}
-                    onMouseUp={handleTouchEnd}
-                    onMouseLeave={handleTouchEnd}
-                  >
-                    {/* 30分区切りの薄い境界線 */}
-                    <div className="absolute w-full h-px bg-gray-200 top-1/2"></div>
-                    
-                    {/* 予約表示 */}
-                    <div className="relative h-full">
-                      {renderAppointment(date, hour)}
-                    </div>
-                    
-                    {/* 長押しインジケーター */}
-                    {isSelected && showLongPressIndicator && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-70">
-                        <div className="text-xs font-medium text-blue-800">
-                          予約作成中...
+                {/* 各曜日の時間枠 */}
+                {weekDates.map((date, dateIndex) => {
+                  const booked = isSlotBooked(date, timeSlot);
+                  const isSelected = selectedSlot && 
+                                    isSameDay(selectedSlot.date, date) && 
+                                    selectedSlot.hour === Math.floor(timeSlot);
+                  
+                  return (
+                    <div 
+                      key={dateIndex} 
+                      className={`relative border-r border-gray-300 ${
+                        booked ? '' : 'cursor-pointer hover:bg-blue-50'
+                      } ${isSelected && showLongPressIndicator ? 'bg-blue-100' : ''}`}
+                      onClick={() => !booked && handleSlotClick(date, timeSlot)}
+                      onTouchStart={() => handleTouchStart(date, timeSlot)}
+                      onTouchEnd={handleTouchEnd}
+                      onTouchCancel={handleTouchEnd}
+                      onMouseDown={() => handleTouchStart(date, timeSlot)}
+                      onMouseUp={handleTouchEnd}
+                      onMouseLeave={handleTouchEnd}
+                    >
+                      {/* 予約表示 */}
+                      {renderAppointment(date, timeSlot)}
+                      
+                      {/* 長押しインジケーター */}
+                      {isSelected && showLongPressIndicator && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 bg-opacity-70 z-20">
+                          <div className="text-xs font-medium text-blue-800">
+                            予約作成中...
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
+      )}
+
+      {/* 設定パネル */}
+      {showSettings && (
+        <CalendarSettingsPanel
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          currentSettings={settings}
+          onSettingsChange={handleSettingsChange}
+        />
       )}
     </div>
   );

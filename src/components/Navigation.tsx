@@ -17,7 +17,7 @@ const Navigation = () => {
     <nav className="bg-foreground text-background p-4 shadow-md">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" className="text-xl font-bold">
-          美容師アプリ
+          Hair Karte
         </Link>
         
         <div className="flex space-x-4">
@@ -69,7 +69,6 @@ const Navigation = () => {
                 : 'text-gray-200 hover:bg-gray-700 hover:text-white'
             }`}
           >
-            レポート
           </Link>
         </div>
 
