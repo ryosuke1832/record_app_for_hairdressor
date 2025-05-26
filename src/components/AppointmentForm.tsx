@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, setHours, setMinutes } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import CustomerSuggestionsModal from './CustomerSuggestionsModal';
@@ -47,11 +47,17 @@ type AppointmentFormProps = {
 
 export default function AppointmentForm({ initialDate, initialTime }: AppointmentFormProps) {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  
+  // URLパラメータから顧客情報を取得
+  const preSelectedCustomerId = searchParams.get('customerId');
+  const preSelectedCustomerName = searchParams.get('customerName');
+  
+  const [step, setStep] = useState(preSelectedCustomerId ? 2 : 1); // 顧客が事前選択されている場合はステップ2から開始
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [loadingCustomers, setLoadingCustomers] = useState(!preSelectedCustomerId); // 事前選択がある場合は顧客読み込みをスキップ
   const [loadingServices, setLoadingServices] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,8 +68,8 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
   const [showServiceAdjustment, setShowServiceAdjustment] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    customerId: '',
-    customerName: '',
+    customerId: preSelectedCustomerId || '',
+    customerName: preSelectedCustomerName ? decodeURIComponent(preSelectedCustomerName) : '',
     date: initialDate || format(new Date(), 'yyyy-MM-dd'),
     time: initialTime || '10:00',
     note: '',
@@ -72,8 +78,14 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
 
-  // 顧客データを取得
+  // 顧客データを取得（事前選択がない場合のみ）
   useEffect(() => {
+    if (preSelectedCustomerId) {
+      // 事前に選択された顧客がいる場合は、顧客データの読み込みをスキップ
+      setLoadingCustomers(false);
+      return;
+    }
+
     const fetchCustomers = async () => {
       try {
         setLoadingCustomers(true);
@@ -92,7 +104,7 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
     };
 
     fetchCustomers();
-  }, []);
+  }, [preSelectedCustomerId]);
 
   // サービスデータを取得
   useEffect(() => {
@@ -218,6 +230,17 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
     setStep(2);
   };
 
+  // 顧客変更ハンドラ（ステップ2から顧客を変更する場合）
+  const handleChangeCustomer = () => {
+    if (!preSelectedCustomerId) {
+      // 通常の顧客選択フローに戻る
+      setStep(1);
+    } else {
+      // 事前選択された顧客がいる場合は顧客一覧ページに戻る
+      router.push('/customers');
+    }
+  };
+
   // フォーム入力ハンドラ
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -286,7 +309,13 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
       console.log('予約が作成されました:', createdAppointment);
 
       alert('予約が登録されました');
-      router.push('/calendar');
+      
+      // 事前選択された顧客がいる場合は顧客詳細ページに戻る
+      if (preSelectedCustomerId) {
+        router.push(`/customers/${preSelectedCustomerId}`);
+      } else {
+        router.push('/calendar');
+      }
       
     } catch (error) {
       console.error('予約登録エラー:', error);
@@ -407,11 +436,30 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
             3
           </div>
         </div>
+        
+        {/* 事前選択された顧客がいる場合の情報表示 */}
+        {preSelectedCustomerId && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-700">選択された顧客</p>
+                <p className="font-medium text-blue-900">{formData.customerName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleChangeCustomer}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                顧客を変更
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* ステップ1: 顧客選択 */}
-        {step === 1 && (
+        {/* ステップ1: 顧客選択（事前選択がない場合のみ表示） */}
+        {step === 1 && !preSelectedCustomerId && (
           <div>
             <h2 className="text-xl font-semibold mb-4">顧客を選択</h2>
             
@@ -508,10 +556,10 @@ export default function AppointmentForm({ initialDate, initialTime }: Appointmen
               <button
                 type="button"
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2"
-                onClick={() => setStep(1)}
+                onClick={() => preSelectedCustomerId ? handleChangeCustomer() : setStep(1)}
                 disabled={isSubmitting}
               >
-                戻る
+                {preSelectedCustomerId ? '顧客変更' : '戻る'}
               </button>
               <button
                 type="button"
